@@ -1,13 +1,22 @@
 # Machine Learning Engineer Nanodegree
 ## Capstone Project
-Joe Udacity  
-December 31st, 2050
+Marco Fagiani  
+August 17st, 2020
 
 ## I. Definition
-_(approx. 1-2 pages)_
-
 ### Project Overview
+Investment firms, hedge funds and even  individuals have been using financial models to better understand market behavior and make profitable investments and trades. A wealth of  information is available in the form of historical stock prices and  company performance data, suitable for machine learning algorithms to  process.
+
+The goal of this project is to build a stock price predictor that takes daily trading data over a certain date range as input, and outputs  projected estimates for given query dates. Note that the inputs will  contain multiple metrics, such as opening price (Open), highest price the stock traded at (High), how many stocks were traded (Volume) and closing price adjusted for stock splits and dividends (Adjusted Close);  this system only needs to predict the Adjusted Close price.
+
+**TODO**
+
+- add visualization
+
+#####
+
 In this section, look to provide a high-level overview of the project in layman’s terms. Questions to ask yourself when writing this section:
+
 - _Has an overview of the project been provided, such as the problem domain, project origin, and related datasets or input data?_
 - _Has enough background information been given so that an uninformed reader would understand the problem domain and following problem statement?_
 
@@ -27,6 +36,9 @@ In this section, you will need to clearly define the metrics or calculations you
 _(approx. 2-4 pages)_
 
 ### Data Exploration
+
+![AAPL](imgs/stock_AAPL.png)
+
 In this section, you will be expected to analyze the data you are using for the problem. This data can either be in the form of a dataset (or datasets), input data (or input files), or even an environment. The type of data should be thoroughly described and, if possible, have basic statistics and information presented (such as discussion of input features or defining characteristics about the input or environment). Any abnormalities or interesting qualities about the data that may need to be addressed have been identified (such as features that need to be transformed or the possibility of outliers). Questions to ask yourself when writing this section:
 - _If a dataset is present for this problem, have you thoroughly discussed certain features about the dataset? Has a data sample been provided to the reader?_
 - _If a dataset is present for this problem, are statistics about the dataset calculated and reported? Have any relevant results from this calculation been discussed?_

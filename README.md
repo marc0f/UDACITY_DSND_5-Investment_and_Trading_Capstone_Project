@@ -1,6 +1,22 @@
+# Data Science Data Scientist Nanodegree. Capstore Project: Investment and Trading
+
+## Capstore Report
+
+The complete report is available in the folder [report](report/REPORT.md)
+
+
+## Get started
+
+At first have a look of the retrieved data by running:
+
+    python data_retriever/data_analysis.py
+
+
+
 Project main reference: https://docs.google.com/document/d/1ycGeb1QYKATG6jvz74SAMqxrlek9Ed4RYrzWNhWS-0Q/pub
 
 
 Available API for financial:
- - Yahoo! Finance: https://pypi.org/project/yahoo-finance/
+ - (broken) Yahoo! Finance: (broken)[]https://pypi.org/project/yahoo-finance/] (works)[https://github.com/ranaroussi/yfinance]
  - Bloomberg: https://www.bloomberg.com/professional/support/api-library/ [package doc](https://bloomberg.github.io/blpapi-docs/python/3.13/)
+ - (pay for use) Quandl: https://docs.quandl.com/docs/python-installation [Stock prices doc](https://www.quandl.com/data/EOD-End-of-Day-US-Stock-Prices/documentation)
