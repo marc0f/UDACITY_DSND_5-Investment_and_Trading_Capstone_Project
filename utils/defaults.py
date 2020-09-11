@@ -15,3 +15,18 @@ DEFAULT_SYMBOLS={
 
 # default data dir
 DATA_DIR=os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data')
+
+
+INTERVALS_TO_SECONDS={
+    '1d': 24*60*60,
+}
+
+
+def interval_to_seconds(interval: str):
+
+    seconds = INTERVALS_TO_SECONDS.get(interval)
+
+    if seconds is None:
+        raise ValueError("Missing reference value for given interval.")
+
+    return seconds

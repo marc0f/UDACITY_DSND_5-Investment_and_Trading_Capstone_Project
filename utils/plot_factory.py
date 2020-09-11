@@ -3,7 +3,7 @@ import plotly.graph_objs as go
 from plotly.offline import plot as poff
 
 
-def plot_historical(symbol_name: str, data: pd.DataFrame):
+def plot_historical(symbol_name: str, data: pd.DataFrame, open_file=False):
     """ plot historical data from data retriever """
 
     traces = list()
@@ -26,7 +26,7 @@ def plot_historical(symbol_name: str, data: pd.DataFrame):
         xaxis_title="Date",
         yaxis_title="Price ($)",
         legend_title="Legend Title")
-    poff(fig, filename=plot_filename, auto_open=True)
+    poff(fig, filename=plot_filename, auto_open=open_file)
 
 
 def plot_multiple_histocals(data):
