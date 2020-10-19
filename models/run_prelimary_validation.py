@@ -1,7 +1,16 @@
+import os
 import datetime
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from sklearn.multioutput import MultiOutputRegressor
+from sklearn.svm import SVR
+from sklearn.preprocessing import StandardScaler, Normalizer
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+from joblib import dump
+from sklearn.utils import check_array
 import logging
 
 # local imports
@@ -13,10 +22,20 @@ from utils.defaults import DEFAULT_SYMBOLS
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+num_cpus = os.cpu_count() - 1
+np.random.seed(42)
+
 
 def is_unique(s):
     a = s.to_numpy() # s.values (pandas<0.24)
     return (a[0] == a).all()
+
+
+def mean_absolute_percentage_error(y_true, y_pred):
+    ## Note: does not handle mix 1d representation
+    #if _is_1d(y_true):
+    #    y_true, y_pred = _check_1d_array(y_true, y_pred)
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
 
 
 def clean_data(data):
@@ -41,7 +60,7 @@ def validate_input_data(data):
         raise ValueError(f"Input data must be pd.DataFrame, pd.Series or np.ndarray. Received type: {type(data)}")
 
 
-def data_generator(data, labels=None, lookback=0, delay=0, indexes=None, shuffle=False, batch_size=128, step=1, non_stop=False):
+def data_generator(data, labels=None, lookback=0, delays=[0], indexes=None, shuffle=False, batch_size=128, step=1, non_stop=False):
     """ subsample data and create delayed data
     inputs:
         data: dataframe to use as samples and, conditionally, as targets
@@ -67,6 +86,12 @@ def data_generator(data, labels=None, lookback=0, delay=0, indexes=None, shuffle
 
     """
 
+    if isinstance(delays, (int, float)):
+        delays = [delays]
+
+    max_delay = max(delays)
+    len_delay = len(delays)
+
     data = validate_input_data(data)
     labels = validate_input_data(labels)
 
@@ -74,12 +99,12 @@ def data_generator(data, labels=None, lookback=0, delay=0, indexes=None, shuffle
     support_index = None  # use to get the actual index, allow to work with continues range
     if indexes is None:
         # use all data directly
-        max_index = len(data) - delay - 1
+        max_index = len(data) - max_delay - 1
         support_index = np.asanyarray(range(min_index, len(data)))
 
     else:
         # min and max index go from 0 to len(indexes), create support vector to max i -> indexes[i] -> data[indexes[i]]
-        max_index = len(indexes) - delay - 1
+        max_index = len(indexes) - max_delay - 1
         support_index = indexes
 
     i = min_index + lookback
@@ -137,7 +162,9 @@ def data_generator(data, labels=None, lookback=0, delay=0, indexes=None, shuffle
                             lookback // step,
                             data.shape[-1]))
 
-    targets = np.zeros((len(rows),))
+    # targets = np.zeros((len(rows), len_delay))
+    targets = np.zeros((len(rows), len_delay))
+
     for j, row in enumerate(rows):
         if lookback == 0:
             indices = [rows[j]]
@@ -146,37 +173,156 @@ def data_generator(data, labels=None, lookback=0, delay=0, indexes=None, shuffle
             indices = range(rows[j] - lookback, rows[j], step)
 
         samples[j] = data[support_index[indices]]
-        targets[j] = labels[support_index[rows[j] + delay]]
+
+        for i, _delay in enumerate(delays):
+            targets[j, i] = labels[support_index[rows[j] + _delay]]
+
     return samples, targets
 
 
-def prepare_data(data, delay=0):
+def prepare_data(data, delays=None, diffs=[]):
     """ target is adjusted close"""
 
     targets = data['Adj Close']
     samples = data.drop(columns='Adj Close')
 
-    samples, targets = data_generator(samples, targets, delay=delay, batch_size=0)
+    if diffs:
+        df_diff_features = pd.DataFrame()
+        for diff in diffs:
+            features_diff = samples.diff(periods=diff).add_suffix(f"_diff{diff}")
+            df_diff_features = features_diff if df_diff_features.empty else df_diff_features.join(features_diff)
+
+        samples = samples.join(df_diff_features)
+
+    samples = samples.dropna()  # drop rows with at least 1 nans
+    targets = targets[samples.index[0]:samples.index[-1]]
+
+    samples, targets = data_generator(samples, targets, delays=delays, batch_size=0)
 
     return samples, targets
 
 
+def build_model():
+
+    # compose the processing pipeline
+    pipeline = Pipeline([
+        ('scaler', StandardScaler()),
+        # ('scaler', Normalizer()),
+        ('regres', MultiOutputRegressor(SVR(), n_jobs=num_cpus))
+        # ('regres', SVR())
+    ])
+
+    # # full params
+    # parameters = {
+    #     'regres__estimator__kernel': [10, 50, 100, 200],
+    #     'regres__estimator__min_samples_split': [2, 3, 4]
+    # }
+
+    # reduced params
+    # best_parameters = {
+    #     'cls__estimator__kernel': ['linear', 'rgf'],
+    #     'tfidf__use_idf': (True, False),
+    #     'vect__max_df': 0.5,
+    #     'vect__max_features': 10000,
+    #     'vect__ngram_range': (1, 2)}
+
+    parameters = {
+        # 'regres__estimator__C': np.arange(0.2, 2, step=0.2),
+        'regres__estimator__C': np.arange(0.2, 2, step=0.5),
+        # 'regres__estimator__cache_size': 200,
+        # 'regres__estimator__coef0': 0.0,
+        # 'regres__estimator__degree': 3,
+        # 'regres__estimator__epsilon': np.arange(0.02, 0.2, step=0.02),
+        'regres__estimator__epsilon': np.arange(0.02, 0.2, step=0.1),
+        # 'regres__estimator__gamma': 'scale',
+        'regres__estimator__kernel': ['linear', 'rbf'],
+        # 'regres__estimator__max_iter': -1,
+        # 'regres__estimator__shrinking': True,
+        # 'regres__estimator__tol': 0.001
+    }
+
+    # instantiate search grid
+    cv = GridSearchCV(pipeline, param_grid=[parameters, parameters, parameters, parameters], verbose=2)
+    return cv
+    # return pipeline
+
+
+def evaluate_model(model, X_test, Y_test, X_train, Y_train, category_names):
+
+    # use model to predict output given the test data
+    Y_pred = model.predict(X_test)
+    Y_pred_train = model.predict(X_train)
+
+    # convert prediction and expected outputs into dataframes
+    y_pred_df = pd.DataFrame(Y_pred)
+    y_pred_df.columns = category_names
+    y_test_df = pd.DataFrame(Y_test)
+    y_test_df.columns = category_names
+    ##
+    y_pred_train_df = pd.DataFrame(Y_pred_train)
+    y_pred_train_df.columns = category_names
+    y_train_df = pd.DataFrame(Y_train)
+    y_train_df.columns = category_names
+
+    # get reports of the performance (accuracy, f1-score, precision, recall) for each category
+    # reports = dict()
+    print("Lags:\tMSE\t\t\t\t\tMAE\t\t\t\t\tMAPE")
+    for col in category_names:
+        mse = mean_squared_error(y_test_df[col], y_pred_df[col])
+        mae = mean_absolute_error(y_test_df[col], y_pred_df[col])
+        mape = mean_absolute_percentage_error(y_test_df[col], y_pred_df[col])
+        print(f"{col}\t\t{mse}\t{mae}\t{mape}")
+
+        # model performance
+        mse_train = mean_squared_error(y_train_df[col], y_pred_train_df[col])
+        mae_train = mean_absolute_error(y_train_df[col], y_pred_train_df[col])
+        mape_train = mean_absolute_percentage_error(y_train_df[col], y_pred_train_df[col])
+        print(f"({col}\t\t{mse_train}\t{mae_train}\t{mape_train})")
+
+    # print best params when search grid is performed
+    # model._final_estimator.estimators_[1].get_params()
+
+    if isinstance(model, GridSearchCV):
+        print("Best params:")
+        print(model.best_params_)
+
+
+def save_model(model, model_filepath):
+    dump(model, model_filepath)
+
+
 if __name__ == '__main__':
 
-    prediction_horizon = 7  # steps of prediction in base resolution, i.e. days
+    model_filepath = 'test.dump'
+    prediction_horizons = [1, 7, 14, 28]  # steps of prediction in base resolution, i.e. days
 
     symbol = list(DEFAULT_SYMBOLS.keys())[0]
 
-    start_date = datetime.datetime(2016, 1, 1)
-    end_date = datetime.datetime(2020, 8, 31)
+    # start_date = datetime.datetime(2019, 1, 1)
+    # end_date = datetime.datetime(2020, 8, 31)
+    # end_date = datetime.datetime(2020, 12, 31)
 
-    # get OHLC data
+    end_date = datetime.datetime.now() - datetime.timedelta(days=1)
+    start_date = end_date - datetime.timedelta(days=30*6)
+
+    # get OHLCV data
     data = get_daily_historical(symbol, start_date, end_date)
     data = clean_data(data)
-    samples, targets = prepare_data(data, delay=prediction_horizon)
+    samples, targets = prepare_data(data, delays=prediction_horizons, diffs=prediction_horizons)
 
     # plot data
     # plot_historical(symbol, data)
 
-    X_train, X_test, Y_train, Y_test = train_test_split(samples, targets, test_size=0.2)
-    print()
+    X_train, X_test, Y_train, Y_test = train_test_split(samples, targets, test_size=30) #test_size=30, test_size=0.2
+
+    print('Building model...')
+    model = build_model()
+
+    print('Training model...')
+    model.fit(X_train, Y_train)
+
+    print('Evaluating model...')
+    evaluate_model(model, X_test, Y_test, X_train, Y_train, prediction_horizons)
+
+    print('Saving model...\n    MODEL: {}'.format(model_filepath))
+    save_model(model, model_filepath)

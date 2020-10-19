@@ -42,6 +42,13 @@ def get_daily_historical(symbol: str, start_date: datetime, end_date: datetime):
         # if exists load csv and check interval. request data only for missing date range and store updated DataFrame
         data = load_csv(csv_filename)
 
+        # TMP: check for duplicated
+        if data.index.duplicated().any():
+            logger.warning("Found duplicated indexes, cleaning data and re-store.")
+            mask_no_duplicates = ~data.index.duplicated(keep='first')
+            data = data[mask_no_duplicates]
+            store_csv(csv_filename, data)
+
         data_start_date = data.first_valid_index().to_pydatetime() - pd.Timedelta(seconds=interval_in_seconds)
         if start_date < data_start_date:
 

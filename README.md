@@ -12,9 +12,17 @@ At first have a look of the retrieved data by running:
     python data_retriever/data_analysis.py
 
 
+Create update models by running:
+
+    python models/train_regressor.py
+
+The updated model for each asset is stored in the folder _models/local_models_. To use in production a specifi model,
+copy/move it into the folder  _models/production_models_
+
+
+## References
 
 Project main reference: https://docs.google.com/document/d/1ycGeb1QYKATG6jvz74SAMqxrlek9Ed4RYrzWNhWS-0Q/pub
-
 
 Available API for financial:
  - (broken) Yahoo! Finance: (broken)[]https://pypi.org/project/yahoo-finance/] (works)[https://github.com/ranaroussi/yfinance]

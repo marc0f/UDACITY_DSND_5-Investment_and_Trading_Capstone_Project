@@ -1,79 +1,222 @@
-import sys
 import os
+import datetime
+import numpy as np
 import pandas as pd
-from sqlalchemy import create_engine
-import re
-import nltk
-from nltk.corpus import stopwords
-from nltk.stem.wordnet import WordNetLemmatizer
-from nltk.tokenize import word_tokenize
-from sklearn.pipeline import Pipeline
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfTransformer
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.multioutput import MultiOutputClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
+from sklearn.multioutput import MultiOutputRegressor
+from sklearn.svm import SVR
+from sklearn.preprocessing import StandardScaler, Normalizer
+from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
-from sklearn.svm import SVC
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 from joblib import dump
+from sklearn.utils import check_array
+import logging
+
+# local imports
+from data_retriever.retriever import get_daily_historical
+from utils.plot_factory import plot_historical
+from utils.defaults import DEFAULT_SYMBOLS
 
 
-from utils.extra import MyTfidfTransformer, clean_one_class_category
-
-nltk.download('punkt')
-nltk.download('stopwords')
-nltk.download('wordnet')
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 num_cpus = os.cpu_count() - 1
-stop_words = stopwords.words("english")
-lemmatizer = WordNetLemmatizer()
+np.random.seed(42)
 
 
-def load_data(database_filepath):
-    """ load data from database """
-    engine = create_engine(f'sqlite:///{database_filepath}')
-    df = pd.read_sql_table('Message', engine)
-    X = df['message']
-    Y = df.drop(columns=['id', 'message', 'original', 'genre'])
-    category_names = list(Y.columns)
-
-    return X, Y, category_names
+def is_unique(s):
+    a = s.to_numpy() # s.values (pandas<0.24)
+    return (a[0] == a).all()
 
 
-def tokenize(text):
-    # normalize case and remove punctuation
-    text = re.sub(r"[^a-zA-Z0-9]", " ", text.lower())
+def mean_absolute_percentage_error(y_true, y_pred):
+    ## Note: does not handle mix 1d representation
+    #if _is_1d(y_true):
+    #    y_true, y_pred = _check_1d_array(y_true, y_pred)
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
 
-    # tokenize text
-    tokens = word_tokenize(text)
 
-    # lemmatize and remove stop words
-    tokens = [lemmatizer.lemmatize(word) for word in tokens if word not in stop_words]
+def clean_data(data):
+    """ remove nans or constant values columns, or drop equals columns"""
 
-    return tokens
+    for col_name in list(data.columns):
+        if is_unique(data[col_name]):
+            logger.info(f"Column {col_name} has unique values..removed.")
+            data.drop(columns=col_name, inplace=True)
+
+    return data
+
+
+def validate_input_data(data):
+    if isinstance(data, (pd.DataFrame, pd.Series)):
+        return data.values
+
+    elif isinstance(data, np.ndarray):
+        return data
+
+    else:
+        raise ValueError(f"Input data must be pd.DataFrame, pd.Series or np.ndarray. Received type: {type(data)}")
+
+
+def data_generator(data, labels=None, lookback=0, delays=[0], indexes=None, shuffle=False, batch_size=128, step=1, non_stop=False):
+    """ subsample data and create delayed data
+    inputs:
+        data: dataframe to use as samples and, conditionally, as targets
+        labels: if present use this as targets
+        lookback: points in the past to consider in each sample
+        delay: distance in the future of the target respect the sample
+        indexes: list of index to select must be discontinues, as results of kfold, thus create a index-of-indexes to iterate over
+                a continue range
+        shuffle:
+        batch_size:
+        step: take a valid samples every n step
+        non_stop: if True the data_generator continues to generate. If true, you need to set steps_per_epoch in fit params
+
+        # Doc:
+        data — The original array of floating-point data, which you normalized in listing
+        lookback — How many timesteps back the input data should go.
+        delay — How many timesteps in the future the target should be.
+        min_index and max_index — Indices in the data array that delimit which timesteps to draw from.
+                This is useful for keeping a segment of the data for validation and another for testing.
+        shuffle — Whether to shuffle the samples or draw them in chronological order.
+        batch_size — The number of samples per batch.
+        step — The period, in timesteps, at which you sample data. You’ll set it to 6 in order to draw one data point every hour
+
+    """
+
+    if isinstance(delays, (int, float)):
+        delays = [delays]
+
+    max_delay = max(delays)
+    len_delay = len(delays)
+
+    data = validate_input_data(data)
+    labels = validate_input_data(labels)
+
+    min_index = 0
+    support_index = None  # use to get the actual index, allow to work with continues range
+    if indexes is None:
+        # use all data directly
+        max_index = len(data) - max_delay - 1
+        support_index = np.asanyarray(range(min_index, len(data)))
+
+    else:
+        # min and max index go from 0 to len(indexes), create support vector to max i -> indexes[i] -> data[indexes[i]]
+        max_index = len(indexes) - max_delay - 1
+        support_index = indexes
+
+    i = min_index + lookback
+
+    if batch_size == 0:
+        batch_size = max_index + 1
+
+    # while True:
+    #     if shuffle:
+    #         rows = np.random.randint(
+    #             min_index + lookback, max_index, size=batch_size)
+    #     else:
+    #         if i + batch_size >= max_index:
+    #             i = min_index + lookback  # reset index
+    #
+    #         rows = np.arange(i, min(i + batch_size, max_index + 1))
+    #         i += len(rows)
+    #     if lookback == 0:
+    #         samples = np.zeros((len(rows),
+    #                             data.shape[-1]))
+    #
+    #     else:
+    #         samples = np.zeros((len(rows),
+    #                             lookback // step,
+    #                             data.shape[-1]))
+    #
+    #     targets = np.zeros((len(rows),))
+    #     for j, row in enumerate(rows):
+    #         if lookback == 0:
+    #             indices = [rows[j]]
+    #
+    #         else:
+    #             indices = range(rows[j] - lookback, rows[j], step)
+    #
+    #         samples[j] = data[support_index[indices]]
+    #         targets[j] = labels[support_index[rows[j] + delay]]
+    #     yield samples, targets
+
+    if shuffle:
+        rows = np.random.randint(
+            min_index + lookback, max_index, size=batch_size)
+    else:
+        if i + batch_size >= max_index:
+            i = min_index + lookback  # reset index
+
+        rows = np.arange(i, min(i + batch_size, max_index + 1))
+        i += len(rows)
+
+    if lookback == 0:
+        samples = np.zeros((len(rows),
+                            data.shape[-1]))
+
+    else:
+        samples = np.zeros((len(rows),
+                            lookback // step,
+                            data.shape[-1]))
+
+    # targets = np.zeros((len(rows), len_delay))
+    targets = np.zeros((len(rows), len_delay))
+
+    for j, row in enumerate(rows):
+        if lookback == 0:
+            indices = [rows[j]]
+
+        else:
+            indices = range(rows[j] - lookback, rows[j], step)
+
+        samples[j] = data[support_index[indices]]
+
+        for i, _delay in enumerate(delays):
+            targets[j, i] = labels[support_index[rows[j] + _delay]]
+
+    return samples, targets
+
+
+def prepare_data(data, delays=None, diffs=[]):
+    """ target is adjusted close"""
+
+    targets = data['Adj Close']
+    samples = data.drop(columns='Adj Close')  # remove dividends
+
+    if diffs:
+        df_diff_features = pd.DataFrame()
+        for diff in diffs:
+            features_diff = samples.diff(periods=diff).add_suffix(f"_diff{diff}")
+            df_diff_features = features_diff if df_diff_features.empty else df_diff_features.join(features_diff)
+
+        samples = samples.join(df_diff_features)
+
+    samples = samples.dropna()  # drop rows with at least 1 nans
+    targets = targets[samples.index[0]:samples.index[-1]]
+
+    samples, targets = data_generator(samples, targets, delays=delays, batch_size=0)
+
+    return samples, targets
 
 
 def build_model():
 
     # compose the processing pipeline
     pipeline = Pipeline([
-        ('vect', CountVectorizer(tokenizer=tokenize)),
-        # ('tfidf', TfidfTransformer(smooth_idf=False)),
-        ('tfidf', MyTfidfTransformer(smooth_idf=False)),
-        # ('cls', MultiOutputClassifier(RandomForestClassifier(), n_jobs=num_cpus))
-        ('cls', MultiOutputClassifier(SVC(), n_jobs=num_cpus))
+        ('scaler', StandardScaler()),
+        # ('scaler', Normalizer()),
+        ('regres', MultiOutputRegressor(SVR(), n_jobs=num_cpus))
+        # ('regres', SVR())
     ])
 
-    # full params
-    parameters = {
-        'vect__ngram_range': ((1, 1), (1, 2)),
-        'vect__max_df': (0.5, 0.75, 1.0),
-        'vect__max_features': (None, 5000, 10000),
-        'tfidf__use_idf': (True, False),
-        'cls__estimator__n_estimators': [10, 50, 100, 200],
-        'cls__estimator__min_samples_split': [2, 3, 4]
-    }
+    # # full params
+    # parameters = {
+    #     'regres__estimator__kernel': [10, 50, 100, 200],
+    #     'regres__estimator__min_samples_split': [2, 3, 4]
+    # }
 
     # reduced params
     # best_parameters = {
@@ -83,31 +226,62 @@ def build_model():
     #     'vect__max_features': 10000,
     #     'vect__ngram_range': (1, 2)}
 
+    parameters = {
+        # 'regres__estimator__C': np.arange(0.2, 2, step=0.2),
+        'regres__estimator__C': np.arange(0.2, 2, step=0.5),
+        # 'regres__estimator__cache_size': 200,
+        # 'regres__estimator__coef0': 0.0,
+        # 'regres__estimator__degree': 3,
+        # 'regres__estimator__epsilon': np.arange(0.02, 0.2, step=0.02),
+        'regres__estimator__epsilon': np.arange(0.02, 0.2, step=0.1),
+        # 'regres__estimator__gamma': 'scale',
+        'regres__estimator__kernel': ['linear', 'rbf'],
+        # 'regres__estimator__max_iter': -1,
+        # 'regres__estimator__shrinking': True,
+        # 'regres__estimator__tol': 0.001
+    }
+
     # instantiate search grid
-    cv = GridSearchCV(pipeline, param_grid=parameters, verbose=2)
+    cv = GridSearchCV(pipeline, param_grid=[parameters, parameters, parameters, parameters], verbose=2)
     return cv
     # return pipeline
 
 
-def evaluate_model(model, X_test, Y_test, category_names):
+def evaluate_model(model, X_test, Y_test, X_train, Y_train, category_names):
 
     # use model to predict output given the test data
     Y_pred = model.predict(X_test)
+    Y_pred_train = model.predict(X_train)
 
     # convert prediction and expected outputs into dataframes
     y_pred_df = pd.DataFrame(Y_pred)
     y_pred_df.columns = category_names
     y_test_df = pd.DataFrame(Y_test)
     y_test_df.columns = category_names
+    ##
+    y_pred_train_df = pd.DataFrame(Y_pred_train)
+    y_pred_train_df.columns = category_names
+    y_train_df = pd.DataFrame(Y_train)
+    y_train_df.columns = category_names
 
     # get reports of the performance (accuracy, f1-score, precision, recall) for each category
     # reports = dict()
+    print("Lags:\tMSE\t\t\t\t\tMAE\t\t\t\t\tMAPE")
     for col in category_names:
-        print(col)
-        print(classification_report(y_test_df[col], y_pred_df[col]))
-        # reports[col] = classification_report(y_test_df[col], y_pred_df[col], output_dict=True)
+        mse = mean_squared_error(y_test_df[col], y_pred_df[col])
+        mae = mean_absolute_error(y_test_df[col], y_pred_df[col])
+        mape = mean_absolute_percentage_error(y_test_df[col], y_pred_df[col])
+        print(f"{col}\t\t{mse}\t{mae}\t{mape}")
+
+        # model performance
+        mse_train = mean_squared_error(y_train_df[col], y_pred_train_df[col])
+        mae_train = mean_absolute_error(y_train_df[col], y_pred_train_df[col])
+        mape_train = mean_absolute_percentage_error(y_train_df[col], y_pred_train_df[col])
+        print(f"({col}\t\t{mse_train}\t{mae_train}\t{mape_train})")
 
     # print best params when search grid is performed
+    # model._final_estimator.estimators_[1].get_params()
+
     if isinstance(model, GridSearchCV):
         print("Best params:")
         print(model.best_params_)
@@ -117,37 +291,40 @@ def save_model(model, model_filepath):
     dump(model, model_filepath)
 
 
-def main():
-    if len(sys.argv) == 3:
-        database_filepath, model_filepath = sys.argv[1:]
-        print('Loading data...\n    DATABASE: {}'.format(database_filepath))
-        X, Y, category_names = load_data(database_filepath)
-
-        # add step to remove non used classes. Avoid error in Classificators that do not support unique classes (e.g., SVC)
-        Y, category_names = clean_one_class_category(Y)
-
-        X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
-
-        print('Building model...')
-        model = build_model()
-
-        print('Training model...')
-        model.fit(X_train, Y_train)
-
-        print('Evaluating model...')
-        evaluate_model(model, X_test, Y_test, category_names)
-
-        print('Saving model...\n    MODEL: {}'.format(model_filepath))
-        save_model(model, model_filepath)
-
-        print('Trained model saved!')
-
-    else:
-        print('Please provide the filepath of the disaster messages database '
-              'as the first argument and the filepath of the pickle file to '
-              'save the model to as the second argument. \n\nExample: python '
-              'train_classifier.py ../data/DisasterResponse.db classifier.pkl')
-
-
 if __name__ == '__main__':
-    main()
+
+    prediction_horizons = [1, 7, 14, 28]  # steps of prediction in base resolution, i.e. days
+
+    # train a model for each asset
+    for symbol in list(DEFAULT_SYMBOLS.keys()):
+
+        try:
+
+            model_filepath = f"local_models/models_{symbol}.dump"
+
+            # train with latest data
+            end_date = datetime.datetime.now() - datetime.timedelta(days=1)
+            start_date = end_date - datetime.timedelta(days=30*6)
+
+            # get OHLCV data
+            data = get_daily_historical(symbol, start_date, end_date)
+            data = clean_data(data)
+            samples, targets = prepare_data(data, delays=prediction_horizons, diffs=prediction_horizons)
+
+            X_train, X_test, Y_train, Y_test = train_test_split(samples, targets, test_size=30) #test_size=30, test_size=0.2
+
+            print('Building model...')
+            model = build_model()
+
+            print('Training model...')
+            model.fit(X_train, Y_train)
+
+            print('Evaluating model...')
+            evaluate_model(model, X_test, Y_test, X_train, Y_train, prediction_horizons)
+
+            print('Saving model...\n    MODEL: {}'.format(model_filepath))
+            save_model(model, model_filepath)
+
+        except Exception as err:
+            print(f"Unhandled error for asset {symbol}. \n Error details: {err}. \n Continue.")
+            continue
