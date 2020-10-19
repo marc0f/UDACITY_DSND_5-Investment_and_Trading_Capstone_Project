@@ -20,6 +20,13 @@ The updated model for each asset is stored in the folder _models/local_models_. 
 copy/move it into the folder  _models/production_models_
 
 
+## TODO
+
+- dashboard: display last N-days of data and provides prediction points (1, 7, 14, 28 days) (vertical stuck of plots).
+- dashboard: top view provides a quick oerview of available symbols and reports estimated pct change at different
+horizon times, together with color box: light to dark green for increasing positive returns, light to dark red for increasing negative returns.
+
+
 ## References
 
 Project main reference: https://docs.google.com/document/d/1ycGeb1QYKATG6jvz74SAMqxrlek9Ed4RYrzWNhWS-0Q/pub
