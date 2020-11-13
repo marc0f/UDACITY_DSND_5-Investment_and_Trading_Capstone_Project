@@ -17,4 +17,4 @@ if __name__ == '__main__':
         data = get_daily_historical(symbol, start_date, end_date)
 
         # plot data
-        plot_historical(symbol, data)
+        plot_historical(symbol, data, open_file=True)

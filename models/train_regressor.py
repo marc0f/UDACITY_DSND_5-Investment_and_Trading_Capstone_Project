@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler, Normalizer
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from joblib import dump
+from joblib import dump,load
 from sklearn.utils import check_array
 import logging
 
@@ -180,19 +180,26 @@ def data_generator(data, labels=None, lookback=0, delays=[0], indexes=None, shuf
     return samples, targets
 
 
-def prepare_data(data, delays=None, diffs=[]):
+def compute_differential_data(data, diffs=[]):
+
+    df_diff_features = pd.DataFrame()
+    for diff in diffs:
+        features_diff = data.diff(periods=diff).add_suffix(f"_diff{diff}")
+        df_diff_features = features_diff if df_diff_features.empty else df_diff_features.join(features_diff)
+
+    data = data.join(df_diff_features)
+
+    return data
+
+
+def prepare_data(data, delays=[0], diffs=[]):
     """ target is adjusted close"""
 
     targets = data['Adj Close']
     samples = data.drop(columns='Adj Close')  # remove dividends
 
     if diffs:
-        df_diff_features = pd.DataFrame()
-        for diff in diffs:
-            features_diff = samples.diff(periods=diff).add_suffix(f"_diff{diff}")
-            df_diff_features = features_diff if df_diff_features.empty else df_diff_features.join(features_diff)
-
-        samples = samples.join(df_diff_features)
+        samples = compute_differential_data(samples, diffs=diffs)
 
     samples = samples.dropna()  # drop rows with at least 1 nans
     targets = targets[samples.index[0]:samples.index[-1]]
@@ -289,6 +296,10 @@ def evaluate_model(model, X_test, Y_test, X_train, Y_train, category_names):
 
 def save_model(model, model_filepath):
     dump(model, model_filepath)
+
+
+def load_model(model_filepath):
+    return load(model_filepath)
 
 
 if __name__ == '__main__':

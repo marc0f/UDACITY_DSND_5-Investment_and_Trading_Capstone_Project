@@ -93,7 +93,8 @@ ENV/
 # Extra
 **/.directory
 **/*.csv
-**/*.html
+#**/*.html
+data_retriever/*.html
 
 # excluded
 !og_logs/*.log

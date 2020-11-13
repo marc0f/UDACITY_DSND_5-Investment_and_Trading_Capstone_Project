@@ -1,180 +1,84 @@
 import json
-import plotly
+import datetime
+import numpy as np
 import pandas as pd
-import re
 
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
-from nltk.tokenize import word_tokenize
 
 from flask import Flask
 from flask import render_template, request, jsonify
-from plotly.graph_objs import Bar
-from joblib import load
-from sqlalchemy import create_engine
+import plotly
 
-from utils.extra import MyTfidfTransformer, clean_one_class_category
+from data_retriever.retriever import get_daily_historical
+from utils.plot_factory import plot_historical
+from utils.defaults import DEFAULT_SYMBOLS
+from models.train_regressor import prepare_data, clean_data, load_model
 
 
 app = Flask(__name__)
 
 
-# def tokenize(text):
-#     tokens = word_tokenize(text)
-#     lemmatizer = WordNetLemmatizer()
-#
-#     clean_tokens = []
-#     for tok in tokens:
-#         clean_tok = lemmatizer.lemmatize(tok).lower().strip()
-#         clean_tokens.append(clean_tok)
-#
-#     return clean_tokens
-
-
-def tokenize(text):
-    stop_words = stopwords.words("english")
-    lemmatizer = WordNetLemmatizer()
-    # normalize case and remove punctuation
-    text = re.sub(r"[^a-zA-Z0-9]", " ", text.lower())
-
-    # tokenize text
-    tokens = word_tokenize(text)
-
-    # lemmatize and remove stop words
-    tokens = [lemmatizer.lemmatize(word) for word in tokens if word not in stop_words]
-
-    return tokens
-
-
-# load data
-engine = create_engine('sqlite:///../data/DisasterResponse.db')
-df = pd.read_sql_table('Message', engine)
-_, category_names = clean_one_class_category(df.drop(columns=['id', 'message', 'original', 'genre']))
-
-# load model
-model = load("../models/classifier.pkl")
-
-
-# index webpage displays cool visuals and receives user input text for model
+# index webpage displays cool visuals
 @app.route('/')
 @app.route('/index')
 def index():
 
-    # extract data needed for visuals
-    genre_counts = df.groupby('genre').count()['message']
-    genre_names = list(genre_counts.index)
+    figures = list()
 
-    avg_message_tokens = df['message'].iloc[0:10].apply(tokenize).str.len().mean()
-    df_categories = df.drop(columns=['id', 'message', 'original', 'genre'])
-    avg_categories_per_message = df_categories.sum(axis=1).mean()
+    # start_date = datetime.datetime(2016, 1, 1)
+    # end_date = datetime.datetime(2020, 8, 31)
+    end_date = datetime.datetime.now()
+    start_date = end_date - datetime.timedelta(days=180)
 
-    sort_categories_series = df_categories.sum(axis=0).sort_values(ascending=False)
-    # less_common_categories_series = df_categories.sum(axis=0).sort_values()[:3]
+    prediction_horizons = [1, 7, 14, 28]
 
-    # create visuals
-    graphs = [
-        {
-            'data': [
-                Bar(
-                    x=genre_names,
-                    y=genre_counts
-                )
-            ],
+    regression_result_1d = dict()
+    regression_result_7d = dict()
+    regression_result_14d = dict()
+    regression_result_28d = dict()
 
-            'layout': {
-                'title': 'Distribution of Message Genres',
-                'yaxis': {
-                    'title': "Count"
-                },
-                'xaxis': {
-                    'title': "Genre"
-                }
-            }
-        },
-        {
-            'data': [
-                Bar(
-                    x=['Avg. tokens', 'Avg. categories'],
-                    y=[avg_message_tokens, avg_categories_per_message]
-                )
-            ],
+    for symbol in DEFAULT_SYMBOLS.keys():
 
-            'layout': {
-                'title': 'Average tokens per message and average categories per message',
-                'yaxis': {
-                    'title': "Count"
-                },
-                'xaxis': {
-                    'title': ""
-                }
-            }
-        },
-        {
-            'data': [
-                Bar(
-                    x=sort_categories_series.index,
-                    y=sort_categories_series.values / df.shape[0]
-                )
-            ],
+        model = load_model(f"../models/production_models/models_{symbol}.dump")
 
-            'layout': {
-                'title': 'Distribution of categories (percentage of usage)',
-                'yaxis': {
-                    'title': "Percentage"
-                },
-                'xaxis': {
-                    'title': "Categories"
-                }
-            }
-        },
-        # {
-        #     'data': [
-        #         Bar(
-        #             x=less_common_categories_series.index,
-        #             y=less_common_categories_series.values
-        #         )
-        #     ],
-        #
-        #     'layout': {
-        #         'title': 'Less common categories (bottom 3)',
-        #         'yaxis': {
-        #             'title': "Count"
-        #         },
-        #         'xaxis': {
-        #             'title': "Categories"
-        #         }
-        #     }
-        # }
-    ]
+        # get OHLCV data
+        data = get_daily_historical(symbol, start_date, end_date)
+
+        data = clean_data(data)
+        regression_input, _ = prepare_data(data.copy(), diffs=prediction_horizons)
+        regression_input = regression_input[-1, :].reshape(1, -1)
+
+        # compute predictions
+        regression_outputs = model.predict(regression_input)[0]
+
+        current_price = data['Adj Close'].iloc[0]
+        regression_pct_returns = 100 * (regression_outputs - current_price) / current_price
+        regression_pct_returns = np.round(regression_pct_returns, decimals=2)
+
+        regression_result_1d.update({symbol: regression_pct_returns[0]})
+        regression_result_7d.update({symbol: regression_pct_returns[1]})
+        regression_result_14d.update({symbol: regression_pct_returns[2]})
+        regression_result_28d.update({symbol: regression_pct_returns[3]})
+
+        # plot data
+        fig = plot_historical(symbol, data, return_fig=True)
+        figures.append(fig)
 
     # encode plotly graphs in JSON
-    ids = ["graph-{}".format(i) for i, _ in enumerate(graphs)]
-    graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
+    ids = ['figure-{}'.format(i) for i, _ in enumerate(figures)]
+    # Convert the plotly figures to JSON for javascript in html template
+    figuresJSON = json.dumps(figures, cls=plotly.utils.PlotlyJSONEncoder)
 
-    # render web page with plotly graphs
-    return render_template('master.html', ids=ids, graphJSON=graphJSON)
-
-
-# web page that handles user query and displays model results
-@app.route('/go')
-def go():
-    # save user input in query
-    query = request.args.get('query', '')
-
-    # use model to predict classification for query
-    classification_labels = model.predict([query])[0]
-    classification_results = dict(zip(category_names, classification_labels))
-
-    # This will render the go.html Please see that file. 
-    return render_template(
-        'go.html',
-        query=query,
-        classification_result=classification_results
-    )
+    return render_template('index.html',
+                           ids=ids,
+                           figuresJSON=figuresJSON,
+                           regression_result_1d=regression_result_1d,
+                           regression_result_7d=regression_result_7d,
+                           regression_result_14d=regression_result_14d,
+                           regression_result_28d=regression_result_28d)
 
 
 def main():
-    app.run(host='0.0.0.0', port=3001, debug=True)
+    app.run(host='0.0.0.0', port=8080, debug=True)
 
 
 if __name__ == '__main__':
