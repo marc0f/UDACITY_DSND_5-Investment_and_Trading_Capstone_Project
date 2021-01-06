@@ -8,7 +8,7 @@ from yfinance import Ticker
 from utils.defaults import DATA_DIR, interval_to_seconds
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 def create_filename(symbol: str, interval: str):
@@ -16,11 +16,21 @@ def create_filename(symbol: str, interval: str):
 
 
 def store_csv(filename: str, data: pd.DataFrame):
+    data = clean_data(data)
     data.to_csv(filename)
 
 
 def load_csv(filename: str):
     return pd.read_csv(filename, header=0, index_col=0, parse_dates=True)
+
+
+def clean_data(data):
+    if data.index.duplicated().any():
+        logger.warning("Found duplicated indexes, cleaning data before store it.")
+        mask_no_duplicates = ~data.index.duplicated(keep='first')
+        data = data[mask_no_duplicates]
+
+    return data
 
 
 def get_daily_historical(symbol: str, start_date: datetime, end_date: datetime):
@@ -41,13 +51,6 @@ def get_daily_historical(symbol: str, start_date: datetime, end_date: datetime):
 
         # if exists load csv and check interval. request data only for missing date range and store updated DataFrame
         data = load_csv(csv_filename)
-
-        # TMP: check for duplicated
-        if data.index.duplicated().any():
-            logger.warning("Found duplicated indexes, cleaning data and re-store.")
-            mask_no_duplicates = ~data.index.duplicated(keep='first')
-            data = data[mask_no_duplicates]
-            store_csv(csv_filename, data)
 
         data_start_date = data.first_valid_index().to_pydatetime() - pd.Timedelta(seconds=interval_in_seconds)
         if start_date < data_start_date:
@@ -87,13 +90,14 @@ def get_daily_historical(symbol: str, start_date: datetime, end_date: datetime):
             else:
                 logger.info(f"No data received.")
 
-
     else:
         # first download, request full range and store to csv
         logger.info(f"Request full range to provider.")
         data = _get_historical(symbol, start_date, end_date, interval)
-        data.to_csv(csv_filename)
+        store_csv(csv_filename, data)
         logger.info(f"Data received and stored in {csv_filename}")
+
+    data = clean_data(data)
 
     return data[start_date:end_date]
 
