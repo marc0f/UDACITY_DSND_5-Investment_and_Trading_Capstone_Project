@@ -2,6 +2,7 @@ import json
 import datetime
 import numpy as np
 import pandas as pd
+import logging
 
 
 from flask import Flask
@@ -15,7 +16,7 @@ from models.train_regressor import prepare_data, clean_data, load_model
 
 
 app = Flask(__name__)
-
+logger = logging.getLogger(__name__)
 
 # index webpage displays cool visuals
 @app.route('/')
@@ -38,6 +39,7 @@ def index():
 
     for symbol in DEFAULT_SYMBOLS.keys():
 
+        logger.info(f"Performing regression for symbol: {symbol}")
         model = load_model(f"../models/production_models/models_{symbol}.dump")
 
         # get OHLCV data
