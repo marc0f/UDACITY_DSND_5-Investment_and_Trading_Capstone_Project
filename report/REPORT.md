@@ -202,7 +202,7 @@ _(approx. 3-5 pages)_
 
 
 
-```
+```python
 data = get_daily_historical(symbol, start_date, end_date)
 data = clean_data(data)
 samples, targets = prepare_data(data, delays=prediction_horizons, diffs=prediction_horizons)
@@ -210,7 +210,7 @@ samples, targets = prepare_data(data, delays=prediction_horizons, diffs=predicti
 
 
 
-```
+```python
 
 
 pipeline = Pipeline([
