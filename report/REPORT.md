@@ -1,43 +1,58 @@
 # Machine Learning Engineer Nanodegree
 ## Capstone Project
 Marco Fagiani  
-August 17st, 2020
+January 20st, 2020
 
 ## I. Definition
 ### Project Overview
-Investment firms, hedge funds and even  individuals have been using financial models to better understand market behavior and make profitable investments and trades. A wealth of  information is available in the form of historical stock prices and  company performance data, suitable for machine learning algorithms to  process.
+Investment firms, hedge funds and even individuals have been using financial models to better understand market behavior and make profitable investments and trades. A wealth of  information is available in the form of historical stock prices and company performance data, suitable for machine learning algorithms to process.
 
-The goal of this project is to build a stock price predictor that takes daily trading data over a certain date range as input, and outputs  projected estimates for given query dates. Note that the inputs will  contain multiple metrics, such as opening price (Open), highest price the stock traded at (High), how many stocks were traded (Volume) and closing price adjusted for stock splits and dividends (Adjusted Close);  this system only needs to predict the Adjusted Close price.
+The goal of this project is to build a stock price predictor that takes daily trading data over a certain date range as input, and outputs projected estimates for given query dates. The selected model should guarantee a percentage error of the prediction (in the training phase) lower than the 5%. Note that the inputs will contain multiple metrics, such as opening price (Open), highest price the stock traded at (High), how many stocks were traded (Volume) and closing price adjusted for stock splits and dividends (Adjusted Close); this system only needs to predict the Adjusted Close price.
 
-**TODO**
+In summary the project is divided in three main parts: 
 
-- add visualization
+- data retrieving;
+- data modeling;
+-  data visualization. 
 
-#####
+The data retrieving is taking care of collect data from trusted source, clean them, combine with previous data and make them available to consumption of the others parts. 
 
-In this section, look to provide a high-level overview of the project in layman’s terms. Questions to ask yourself when writing this section:
+The data modeling's main task is to perform analysis and to produce the model that will be used to predict the market returns for different time spans. This part is mainly developed to be run on demand by the user to update the models, using the same hyper-parameters as well as to provide all the methods to investigate and explore other solutions. 
 
-- _Has an overview of the project been provided, such as the problem domain, project origin, and related datasets or input data?_
-- _Has enough background information been given so that an uninformed reader would understand the problem domain and following problem statement?_
+Finally, the data visualization part provides a dashboard for the user to display historical data as well as the predictions achieved using up-to-date data. 
+
+
 
 ### Problem Statement
-In this section, you will want to clearly define the problem that you are trying to solve, including the strategy (outline of tasks) you will use to achieve the desired solution. You should also thoroughly discuss what the intended solution will be for this problem. Questions to ask yourself when writing this section:
-- _Is the problem statement clearly defined? Will the reader understand what you are expecting to solve?_
-- _Have you thoroughly discussed how you will attempt to solve the problem?_
-- _Is an anticipated solution clearly defined? Will the reader understand what results you are looking for?_
+
+In order to produce any model the first step required is the collection of the data that will be used. Once a trusted source is selected the data must be analyzed to understand any issues within the data itself. Common problems are the presence of gaps in the data, fields reporting the same constant value, or fields with missing data. Moreover, begin the main goal to provide up-to-date prediction, the data must be updated with newest one on daily basis, avoiding the download of the whole required range every time.  
+
+Aiming to produce a prediction of the future returns for different time spans, one thing to understand is the amount o data to be used, especially to train the model. Few data will produce a model with both poor performance and not representing the general phenomena, but only a specific path in the data. On the other hand, using the maximum amount of data available, without a proper split in train and test sets, could lead to produce poor performance (example, due to over-fitting the model on the training data), lack of specificity of the model as well as really long training times. Moreover, the extraction of meaningful features is another important step. Select the right feature, even just dropping of the original one, can help to reduce the number of used data (thus a faster training phase), as well as pointing to the development of features that maximize the knowledge.
+
+Finally, the results must be presented to the final user, in yet comprehensive but understandable manner.
+
+
 
 ### Metrics
-In this section, you will need to clearly define the metrics or calculations you will use to measure performance of a model or result in your project. These calculations and metrics should be justified based on the characteristics of the problem and problem domain. Questions to ask yourself when writing this section:
-- _Are the metrics you’ve chosen to measure the performance of your models clearly discussed and defined?_
-- _Have you provided reasonable justification for the metrics chosen based on the problem and solution?_
+In this project have been adopted 3 metrics: mean squared error (MSE), mean absolute error (MAE) and mean absolute percentage error. Defined as:
+
+
+$$
+MSE = \frac{1}{n} \sum^{n}_{i=1} (y_i - \hat{y}_i)^2\\
+MAE = \frac{\sum^{n}_{i=1} |y_i - \hat{y}_i|}{n}\\
+MAPE = \frac{1}{n}\sum^{n}_{i=1}|\frac{y_i - \hat{y}_i}{y_i}|
+$$
+where, given a time-series $Y$ of $n$ elements, $y_i$ is the i-th actual value and $\hat{y}_i$ is the corresponding predicted value.
+
+The MSE and the MAE are metrics commonly used to measure the regression performance, and thus have been kept to have a wide pool of metrics to perform the models evaluation. The MAPE has been selected because the target of the project is to select a model capable to achieve a prediction percentage error lower than 5%.
+
+
 
 
 ## II. Analysis
-_(approx. 2-4 pages)_
-
 ### Data Exploration
 
-According to latest Investopedia the (Top Stocks for August 2020)[https://www.investopedia.com/top-stocks-4581225] are:
+The project has been performed over the following set of stocks:
 
 - Best Value Stocks 
   - NRG Energy Inc. ([NRG](https://www.investopedia.com/markets/quote?tvwidgetsymbol=NRG))
@@ -53,28 +68,122 @@ According to latest Investopedia the (Top Stocks for August 2020)[https://www.in
   - Regeneron Pharmaceuticals Inc. ([REGN](https://www.investopedia.com/markets/quote?tvwidgetsymbol=REGN))
   - S&P 500
 
+Considered the Top Stock till mid-2020 ((Investopedia)[https://www.investopedia.com/top-stocks-4581225]).
+
+The stock data are retrieved using the Yahoo! Finance API (https://pypi.org/project/yfinance/) and leveraging over the historical end-point to obtain the following data:
+
+```
+             Open   High    Low  Close  Adj Close   Volume  Dividends  Stock Splits
+Date                                                                               
+2009-12-31  23.90  24.00  23.61  23.61      20.67  1024900        0.0             0
+2010-01-04  23.78  24.13  23.70  23.87      20.89  1683700        0.0             0
+2010-01-05  23.96  24.28  23.81  24.24      21.22  3473400        0.0             0
+2010-01-06  24.25  24.79  24.11  24.77      21.68  2719300        0.0             0
+2010-01-07  24.79  25.24  24.73  24.91      21.80  3200800        0.0             0
+```
+
+Basically, the query is performed from the current UTC datetime back till the required range is obtained. The raw data is then stored in a dedicated CSV, for each symbol. In further queries are performed, if the CSV already exists, at first the data are read from it and only for the missing date range a new query toward the provider is performed. In case of a new query, the new data are integrate with the CSV one, and re-stored into the same CSV.
+
+#### Data cleaning
+
+As said, the raw data are stored in to CSV. A cleaning procedure is performed only on the data before the utilization in the training, test, prediction phases. The only abnormality in the data is the presence of two columns, Dividends and Stock Splits, composed of only 0 values. Therefore, these columns are dropped in a dedicated clean function that detects columns with all equal values.
+
+```python
+def is_unique(s):
+    a = s.to_numpy() # s.values (pandas<0.24)
+    return (a[0] == a).all()
 
 
+def clean_data(data):
+    """ remove nans or constant values columns, or drop equals columns"""
+
+    for col_name in list(data.columns):
+        if is_unique(data[col_name]):
+            logger.info(f"Column {col_name} has unique values..removed.")
+            data.drop(columns=col_name, inplace=True)
+```
 
 
-In this section, you will be expected to analyze the data you are using for the problem. This data can either be in the form of a dataset (or datasets), input data (or input files), or even an environment. The type of data should be thoroughly described and, if possible, have basic statistics and information presented (such as discussion of input features or defining characteristics about the input or environment). Any abnormalities or interesting qualities about the data that may need to be addressed have been identified (such as features that need to be transformed or the possibility of outliers). Questions to ask yourself when writing this section:
-- _If a dataset is present for this problem, have you thoroughly discussed certain features about the dataset? Has a data sample been provided to the reader?_
-- _If a dataset is present for this problem, are statistics about the dataset calculated and reported? Have any relevant results from this calculation been discussed?_
-- _If a dataset is **not** present for this problem, has discussion been made about the input space or input data for your problem?_
-- _Are there any abnormalities or characteristics about the input space or dataset that need to be addressed? (categorical variables, missing values, outliers, etc.)_
 
 ### Exploratory Visualization
 
+Here below is reported the last 6 months of prices (open, close, high, low, adj) and volume for the symbol NRG. 
+
+![NRG Prices](imgs/visual_NRG_1.png)
 
 
-![AAPL](imgs/stock_AAPL.png)
 
-In this section, you will need to provide some form of visualization that summarizes or extracts a relevant characteristic or feature about the data. The visualization should adequately support the data being used. Discuss why this visualization was chosen and how it is relevant. Questions to ask yourself when writing this section:
-- _Have you visualized a relevant characteristic or feature about the dataset or input data?_
-- _Is the visualization thoroughly analyzed and discussed?_
-- _If a plot is provided, are the axes, title, and datum clearly defined?_
+![NRG Volume](imgs/visual_NRG_2.png)
+
+#### Dashboard
+
+The developed dashboard displays the expected returns (predictions) a head of 1, 7, 14, and 28 days for each symbol. Also a visualization of the past data and the predictions is provided in graphs.  
+
+![Dashboard](imgs/dashboard_1.png)
+
+
 
 ### Algorithms and Techniques
+
+#### Data Normalization
+
+Once the data is clean (see below), the next step is to normalize the data. The normalization process can affects the data range (i.e., simple compression or expansion to get data in the [0, 1] range) or alters the data statistics, mean and variance.
+
+##### Min-Max normalization (Normalizer)
+
+Min-max normalization is one of the most common ways to normalize data. For every feature, the minimum value of that feature gets transformed into a 0, the maximum value gets transformed into a 1, and every other value gets transformed into a decimal between 0 and 1. 
+
+
+$$
+\hat{x} = \frac{x - x_{min}}{(x_{max} - x_{min})}
+$$
+
+
+##### Mean and Variance Normalization (StandardScaler)
+
+This normalization ensures that the input is transformed to obtain an mean of the output data approximately zero, while the standard deviation (as well as the variance) is in a range close to unity. Given with $\mu, \sigma$ the mean and the variance of the input data, the output data is:
+$$
+\hat{x} = \frac{x- \mu}{\sigma}
+$$
+
+
+#### Support Vector Regression
+
+The Support Vector Regression approach (SVR or SVM regression) is derived from the Support Vector Machine technique. The SVMs are binary classifiers that discriminate whether an input vector x belongs to class +1 or to class −1 based on the following discriminant function:
+$$
+f(x) = \sum^{N}_{i=1} \alpha_i \cdot t_i \cdot K(\mathbf{x}, \mathbf{x_i}) + d
+$$
+where $t_i \in {+1, -1}, $ $\alpha_i > 0$ and $\sum^{N}_{i=1} \alpha_i · t_i = 0$. The terms $\mathbf{x}_i$ are the “support vectors” and $d$ is a bias term that together with the $\alpha_i$ is determined during the training process of the SVM. The input vector $\mathbf{x}$ is classified as +1 if f(x) ≥ 0 and −1 if $f(x) < 0$. The kernel function $K(·, ·)$ can assume different forms.
+
+Differently from the SVM, the solution of the optimization problem of a linear model (in the feature space) for the SVR is given by:
+$$
+f(x) = \sum^{N}_{i=1} (\alpha_i - \alpha_i^{*}) \cdot K(\mathbf{x}, \mathbf{x_i}) + d
+$$
+where, $\sum^{N}_{i=1} (\alpha_i - \alpha_i^{*}) = 0$ with $\alpha_i, \alpha_i^{*} \in [0, C]$.
+
+The kernel types to be evaluated are the linear and the radial basis function (RBF). A linear kernel expresses a normal dot product of any two given observations, thus $K(x, xi) = (x \times xi)$. Instead, the RBF can map an input space in infinite dimensional space, where $K(u, v) = \exp^{−\gamma (x − x_i^2 )}$. The $\gamma$ and $C$ parameters, and the chosen kernel are crucial to obtain the best performance.  
+
+
+
+#### Cross Validation
+
+
+
+steps:
+
+- simple split 70%/30% with default params to evaluate:
+  - train length
+  - normalization type
+  - feature selection and evaluation
+- finally, CV 70/30 over set of parameters
+- 
+
+#### 
+
+
+
+###################
+
 In this section, you will need to discuss the algorithms and techniques you intend to use for solving the problem. You should justify the use of each one based on the characteristics of the problem and the problem domain. Questions to ask yourself when writing this section:
 - _Are the algorithms you will use, including any default variables/parameters in the project clearly defined?_
 - _Are the techniques to be used thoroughly discussed and justified?_
@@ -90,7 +199,34 @@ In this section, you will need to provide a clearly defined benchmark result or 
 _(approx. 3-5 pages)_
 
 ### Data Preprocessing
+
+
+
+```
+data = get_daily_historical(symbol, start_date, end_date)
+data = clean_data(data)
+samples, targets = prepare_data(data, delays=prediction_horizons, diffs=prediction_horizons)
+```
+
+
+
+```
+
+
+pipeline = Pipeline([
+    ('scaler', StandardScaler()),
+    # ('scaler', Normalizer()),
+    ('regres', MultiOutputRegressor(SVR(), n_jobs=num_cpus))
+    # ('regres', SVR())
+])
+```
+
+
+
+#####
+
 In this section, all of your preprocessing steps will need to be clearly documented, if any were necessary. From the previous section, any of the abnormalities or characteristics that you identified about the dataset will be addressed and corrected here. Questions to ask yourself when writing this section:
+
 - _If the algorithms chosen require preprocessing steps like feature selection or feature transformations, have they been properly documented?_
 - _Based on the **Data Exploration** section, if there were abnormalities or characteristics that needed to be addressed, have they been properly corrected?_
 - _If no preprocessing is needed, has it been made clear why?_
@@ -113,7 +249,7 @@ _(approx. 2-3 pages)_
 
 
 
-prelimiary results
+preliminary results
 
 features: Open   High    Low  Close   Volume  Dividends
 
