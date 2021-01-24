@@ -1,4 +1,5 @@
-# Machine Learning Engineer Nanodegree
+Machine Learning Engineer Nanodegree
+
 ## Capstone Project
 Marco Fagiani  
 January 20st, 2020
@@ -68,9 +69,9 @@ The project has been performed over the following set of stocks:
   - Regeneron Pharmaceuticals Inc. ([REGN](https://www.investopedia.com/markets/quote?tvwidgetsymbol=REGN))
   - S&P 500
 
-Considered the Top Stock till mid-2020 ((Investopedia)[https://www.investopedia.com/top-stocks-4581225]).
+Considered the Top Stock till mid-2020 ([Investopedia](https://www.investopedia.com/top-stocks-4581225)).
 
-The stock data are retrieved using the Yahoo! Finance API (https://pypi.org/project/yfinance/) and leveraging over the historical end-point to obtain the following data:
+The stock data are retrieved using the Yahoo! Finance [API](https://pypi.org/project/yfinance/) and leveraging over the historical end-point to obtain the following data:
 
 ```
              Open   High    Low  Close  Adj Close   Volume  Dividends  Stock Splits
@@ -165,20 +166,38 @@ The kernel types to be evaluated are the linear and the radial basis function (R
 
 
 
-#### Cross Validation
+#### Data Validation
+
+The experiments has been divided in tow main groups: model validation and model finalization.
+
+##### Model validation
+
+In the model validation the data has been split using a standard 70-30 approach, thus 70% of the data has been associated to the train set, and the remaining 30% to the test set. This split has been adopted to perform the validation of the the data normalization to adopt, the length of the train period, and extra  features selection. Moreover, the regression technique parameters have not been optimized in this phase, and the default ones have been adopted: kernel set to RBF, $\gamma$ set to 'scale' (thus value set as $1 / (n\_features * X.var())$), C set to 1, $\epsilon$ set to 1.
+
+In order to select the normalization to use, among none, Mean and Variance Normalization and Min-Max normalization, the data from 2016/01/01 to 2020/08/31 has been adopted.
+
+Once the normalization has been selected, the same time range has been adopted to selected some extra feature to be introduced, extracted from the data, to achieve better results. The extra features selected are the difference for each input data, between the data at the time $t$ and the value of the previous 1, 7, 14, 28 days. Thus generating 4 set of features providing difference to different time lags.
+
+ 
 
 
 
 steps:
 
-- simple split 70%/30% with default params to evaluate:
+- simple split 70%/30% with default parameters to evaluate:
   - train length
   - normalization type
   - feature selection and evaluation
 - finally, CV 70/30 over set of parameters
 - 
 
-#### 
+
+
+
+
+##### Model finalization
+
+Cross-validation and grid search over the hyper-parameters
 
 
 
@@ -249,319 +268,297 @@ _(approx. 2-3 pages)_
 
 
 
-preliminary results
+### Model validation
 
-features: Open   High    Low  Close   Volume  Dividends
+Symbols: NRG
 
-```
-start_date = datetime.datetime(2016, 1, 1)
-end_date = datetime.datetime(2020, 8, 31)
-```
 
-SVR, lags 1, 7, 14, 28 days
 
-StandardScaler
 
-Lags:	MSE					MAE					MAPE
-1		0.626912299976345	0.5582189129997621	2.416236670649339
-7		2.332313971001829	1.1049456118946013	4.676439973038423
-14		4.838131098589591	1.5033607703336376	6.436437982354256
-28		7.993082818960331	2.0478312271443424	8.355871529407466
 
+#### Normalizations
 
+The adopted data range goes from 2016/01/01 to 2020/08/31, 56 months using as features the available from the raw data: Open, High, Low, Close, Volume and Dividends.
 
-No-StandardScaler
+Different normalization techniques can be compared only over MAPE metric.
 
-Lags:	MSE					MAE					MAPE
-1		99.53960422452325	7.998992042098148	44.34350605845658
-7		100.57144584084791	7.967557069736896	44.132938129023955
-14		102.50652110783254	7.996977366226525	44.266408807832754
-28		105.08659083725391	8.11109606332413	44.793733241936714
+##### No Normalization Results
 
+| Lags | MSE      | MAE   | MAPE   |
+| :--- | -------- | ----- | ------ |
+| 1    | 99.540   | 8.000 | 44.344 |
+| 7    | 100.571. | 7.968 | 44.133 |
+| 14   | 102.507  | 7.997 | 44.266 |
+| 28   | 105.087  | 8.111 | 44.794 |
 
 
-Normalizer
 
-Lags:	MSE					MAE					MAPE
-1		113.63390428314175	9.059978374918849	52.39440628045821
-7		113.68015149831623	8.995986955717427	52.26330988354362
-14		112.24867948896319	8.935192975331292	50.92427483733033
-28		110.05762176582907	8.733669393850528	49.794269825608914
+##### Mean and Variance Normalization Results
 
-NOTE: possible overfitting.
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1    | 0.627 | 0.558 | 2.416 |
+| 7    | 2.332 | 1.105 | 4.676 |
+| 14   | 4.838 | 1.503 | 6.436 |
+| 28   | 7.993 | 2.048 | 8.356 |
 
 
 
-```
-start_date = datetime.datetime(2016, 1, 1)
-end_date = datetime.datetime(2016, 8, 31)
-```
+##### Min and Max Normalization Results
 
-Lags:	MSE					MAE					MAPE
-1		0.21112927156271136	0.37523306125488903	3.0149988073730505
-7		0.9633320729430199	0.8199542632833591	6.313100574278932
-14		1.5922181030069802	1.0037223960198722	8.593046278801905
-28		2.4346789468526486	1.1750657488671215	9.416518995355002
+| Lags | MSE     | MAE   | MAPE   |
+| :--- | ------- | ----- | ------ |
+| 1    | 113.634 | 9.060 | 52.394 |
+| 7    | 113.680 | 8.996 | 52.263 |
+| 14   | 112.249 | 8.935 | 50.924 |
+| 28   | 110.058 | 8.734 | 49.794 |
 
 
 
-```
-start_date = datetime.datetime(2016, 1, 1)
-end_date = datetime.datetime(2016, 12, 31)
-```
+Selected normalization: Mean and Variance Normalization
 
-Lags:	MSE					MAE					MAPE
-1		0.3428503306533554	0.40544449958887946	3.6652744668904482
-7		1.0051177815069758	0.8231350085416825	7.443305532119241
-14		1.5062068987884345	0.8968363564593299	7.329102318715586
-28		1.7895787325568986	1.102088804071032	9.328303798479803
-
-
-
-feature: diff1
-
-StandardScaler
-
-Lags:	MSE					MAE					MAPE
-1		0.36669773086460056	0.45297885361674617	3.619969766501647
-7		0.749254108921726	0.6783870391112133	5.657035325985173
-14		1.268399874674519	0.9073602307483047	7.268402714150348
-28		1.5508917218399683	0.9910303857011965	7.813861691404567
-
-
-features: diffs 1, 7, 14, 28
-
-StandardScaler
-Lags:	MSE					MAE					MAPE
-1		0.7962109430306652	0.7286437048516999	5.8249287556292195
-7		1.179714232585351	0.9111768784145695	7.189293378802374
-14		1.5217420461439597	0.9374409230131214	7.186396300825066
-28		0.8323427613932317	0.7015674273915439	5.577134421323211
-
-Data whole 2019, diffs 1, 7, 14, 28
-
-Lags:	MSE					MAE					MAPE
-1		1.7562137972869911	0.962691338237324	2.568557641027029
-7		2.2985211451490803	1.228914921126642	3.290635098739097
-14		2.747151380271036	1.409364621494489	3.773832904051618
-28		2.5268049168683753	1.271901920962301	3.538059109430679
-
-
-Data 2019 to 2020, , diffs 1, 7, 14, 28
-Lags:	MSE					MAE					MAPE
-1		4.82934905276741	1.1888728303878993	3.9008009968905313
-7		4.652657943697871	1.544229815023094	4.656086100677316
-14		5.175249124908902	1.642209472120122	4.872984421744059
-28		10.398085779271335	2.1716518331996855	6.763336131235401
-
-Lags:	MSE					MAE					MAPE
-1		3.835094405117715	1.0651720419597108	3.42535101932008
-(1		2.45342861429535	0.8386575102847726	2.678952727416385)
-7		5.518033906677147	1.568273854697974	4.927039850973423
-(7		3.198372888852507	1.1310044510023152	3.4788181871104182)
-14		7.895454690215884	1.8717983715665645	6.085575597826609
-(14		3.880822665050928	1.2619526978010462	3.854980678288967)
-28		8.855096935427957	2.0899292446352535	6.675513946786582
-(28		7.837095868293962	1.6705011837333177	5.3503191155923195)
-Saving model...
-
-
-
-4 months of data
-INFO:root:Partial range requested to provider: 2020-09-19 00:00:00 to 2020-09-20 10:19:37.056651
-INFO:root:Received dates already present.
-INFO:__main__:Column Stock Splits has unique values..removed.
-Building model...
-Training model...
-Evaluating model...
-Lags:	MSE					MAE					MAPE
-1		0.09041333844697619	0.30068810825667214	0.8771531746110622
-(1		0.009929085895203792	0.09964471946468952	0.2878692568985732)
-7		0.04112422471027988	0.20279108636791676	0.574478998209396
-(7		0.010029321796328764	0.10014612852144704	0.2823047084033788)
-14		0.0516940043738091	0.2273631552688542	0.6698973343219039
-(14		0.010029769802246688	0.10014835380828657	0.2929226087491712)
-28		0.35993189582793844	0.5999432438388972	1.9403080331141564
-(28		0.01008392809625136	0.10041865457860648	0.33083405078586176)
-
-
-6 months of data
-INFO:root:Partial range requested to provider: 2020-09-19 00:00:00 to 2020-09-20 10:18:19.005585
-INFO:root:Received dates already present.
-INFO:__main__:Column Stock Splits has unique values..removed.
-Building model...
-Training model...
-Evaluating model...
-Lags:	MSE					MAE					MAPE
-1		0.27379073702478796	0.3706917553979025	1.107260806121809
-(1		0.3515633201644313	0.2813358024824141	0.8078950620815272)
-7		1.3118976998941505	0.9468353465848182	2.78388958348914
-(7		0.09718952628494888	0.1913696857523749	0.5581547167148168)
-14		0.49841681399486815	0.5727347302208969	1.6905102298801755
-(14		0.08305644104691697	0.17122082716712464	0.5055913188020039)
-28		1.6654831699018948	0.8983777152133395	2.834438535764479
-(28		0.5397337615021407	0.38918745452732373	1.2146702810344183)
-Saving model...
-    MODEL: test.dump
-    
-    
-9 months of data
-INFO:root:Partial range requested to provider: 2020-09-19 00:00:00 to 2020-09-20 10:18:55.544242
-INFO:root:Received dates already present.
-INFO:__main__:Column Stock Splits has unique values..removed.
-Building model...
-Training model...
-Evaluating model...
-Lags:	MSE					MAE					MAPE
-1		4.329030067375523	1.5136511240804693	5.2783027551416755
-(1		3.7551861090084526	1.1666802933004141	4.204243143496817)
-7		8.327019578296868	2.1314983830368543	7.326433806640775
-(7		3.054815218407068	1.0030336006453628	3.37832276945032)
-14		4.709876358915432	1.7143741661978142	5.468094229508142
-(14		1.907153855795759	0.8806746103318818	2.7475377482510006)
-28		2.109193810464049	1.1234313965091065	3.4335442571221524
-(28		1.2031941538759559	0.723600261822423	2.194958275249188)
-Saving model...
-
-
-CORRECT
-test fixed to 30 points (~30gg)
-
-6 months of data (lower)
-INFO:root:Partial range requested to provider: 2020-09-19 00:00:00 to 2020-09-20 10:25:59.895263
-INFO:root:Received dates already present.
-INFO:__main__:Column Stock Splits has unique values..removed.
-Building model...
-Training model...
-Evaluating model...
-Lags:	MSE					MAE					MAPE
-1		0.9533968191567503	0.550888642117904	1.588186524503701
-(1		0.24171096389294827	0.2872608200823117	0.8561987878204682)
-7		0.6590286200460067	0.6496822668882734	1.9407164644430694
-(7		0.0969904652668242	0.2348477134197915	0.6851370712219627)
-14		0.7271535933426745	0.6737909436138125	2.0221963633229105
-(14		0.04830485853518916	0.1638584733484416	0.4763079373466513)
-28		1.0120074081347183	0.692683368687584	2.1289972883552966
-(28		1.1006193328277025	0.626815439791526	1.966588996650763)
-
-9 months of data
-INFO:root:Partial range requested to provider: 2020-09-19 00:00:00 to 2020-09-20 10:26:57.308842
-INFO:root:Received dates already present.
-INFO:__main__:Column Stock Splits has unique values..removed.
-Building model...
-Training model...
-Evaluating model...
-Lags:	MSE					MAE					MAPE
-1		4.407916361996269	1.561400903899289	5.39261167261359
-(1		4.325519742027325	1.227315512548382	4.475876665800974)
-7		7.019567956554122	1.9341061653983145	6.487701047606066
-(7		3.2701858726558037	1.048238837783367	3.551520309220694)
-14		4.233007860427572	1.6400410827569567	5.175446593012515
-(14		1.9581559965996558	0.8812625142366561	2.757690065342179)
-28		2.0013123975935505	1.1547148380751522	3.4818248987029032
-(28		1.2583487501560817	0.7385261573246042	2.2338158086079063)
-Saving model...
-
-
-12 months of data
-
-INFO:root:Partial range requested to provider: 2020-09-19 00:00:00 to 2020-09-20 10:27:25.221924
-INFO:root:Received dates already present.
-INFO:__main__:Column Stock Splits has unique values..removed.
-Building model...
-Training model...
-Evaluating model...
-Lags:	MSE					MAE					MAPE
-1		4.590757028609596	1.5218136904201964	4.990049119278036
-(1		3.582764662082393	1.1266231028902747	3.788171241683819)
-7		6.34985333608511	1.7215401977636402	5.524469129511114
-(7		5.257555540518188	1.4950260941694318	4.7910697520409915)
-14		7.794967582048785	2.2792494643091987	7.079663814312148
-(14		6.617617565032497	1.607977229055129	5.350584049993421)
-28		9.927105324752239	2.4589496899371825	7.4721094863731725
-(28		10.104317622175449	1.91151869391544	6.615722120897891)
-Saving model...
-
-
-15 months
-
-INFO:root:Partial range requested to provider: 2020-09-19 00:00:00 to 2020-09-20 10:27:50.715272
-INFO:root:Received dates already present.
-INFO:__main__:Column Stock Splits has unique values..removed.
-Building model...
-Training model...
-Evaluating model...
-Lags:	MSE					MAE					MAPE
-1		3.2392803909384473	1.2791629376384719	4.086094797825156
-(1		3.2060570885817183	0.9982155172713285	3.319766129055621)
-7		8.223035765794222	1.828664653002194	6.3660117822908
-(7		3.7891908169670567	1.2023929195324035	3.8035261098150226)
-14		3.9884095510787034	1.4200705900735757	4.392582283400434
-(14		5.8594444109160975	1.4306136064004091	4.706874711479915)
-28		17.94642363195005	2.6821158818739055	9.376037015540758
-(28		9.190016868446406	1.7337760756723244	5.790761054221706)
-
-
-
-18 months
-INFO:root:Partial range requested to provider: 2020-09-19 00:00:00 to 2020-09-20 10:28:14.296748
-INFO:root:Received dates already present.
-INFO:__main__:Column Stock Splits has unique values..removed.
-Building model...
-Training model...
-Evaluating model...
-Lags:	MSE					MAE					MAPE
-1		1.7477816657461984	0.8913705555173123	2.7503367227166136
-(1		2.735367252169846	0.8586828291336158	2.852311793826318)
-7		4.581061940114523	1.2642035846787079	4.045202245872913
-(7		3.462179803761099	1.2051556675761057	3.7854403171384026)
-14		5.264854023625132	1.6454889103435153	5.080189659955582
-(14		4.72944925369994	1.348841253037393	4.26797529267095)
-28		9.544615345377498	1.9759231757525855	6.27763712587838
-(28		8.273296600935081	1.7378347380984995	5.625612774717765)
-
-24 months
-INFO:root:Partial range requested to provider: 2020-09-19 00:00:00 to 2020-09-20 10:28:40.598374
-INFO:root:Received dates already present.
-INFO:__main__:Column Stock Splits has unique values..removed.
-Building model...
-Training model...
-Evaluating model...
-Lags:	MSE					MAE					MAPE
-1		4.419071326061516	1.190392815932054	3.8130327721096346
-(1		3.0241176463984223	0.8663691148872869	2.761406376670259)
-7		11.289722619267396	2.174686256093984	7.394900928103641
-(7		3.6788820251483525	1.2262268121798303	3.6721683193968886)
-14		6.200968071117036	1.8744006128333903	5.553293627350579
-(14		5.400474718598246	1.524086633094954	4.570278910039392)
-28		16.05688066315602	2.9064150437706116	9.233620078518832
-(28		8.586376743363	1.916283752270033	5.795838152894383)
-
-
-
-
-
-
-
-FIXED DIFF FEATURES
-
-6month (tra parentesi performance su trainig set)
-
-Lags:	MSE					MAE					MAPE
-1		0.35380435899954765	0.41975376758182276	1.218330470939107
-(1		0.23680639189189742	0.19646725586952649	0.5591343338897765)
-7		0.9247276754318807	0.6937956849682727	2.0544295442204477
-(7		0.3742589197446078	0.29136164860733443	0.889764306062578)
-14		1.3588926651650517	0.8643135447263328	2.6347638040317753
-(14		1.581130561538006	0.7097295697039245	2.2910936314304786)
-28		0.8454111833074267	0.7202116796426371	2.2367703964652037
-(28		0.25709854643311725	0.2704983001137954	0.8824881375121522)
-Best params:
-{'regres__estimator__C': 1.6999999999999997, 'regres__estimator__epsilon': 0.02, 'regres__estimator__kernel': 'rbf'}
-Saving model...
-    MODEL: test.dump
-
-### Model Evaluation and Validation
+
+
+#### Data ranges and Features Selection
+
+##### 6 months
+
+###### No extra features
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1    | 0.738 | 0.692 | 2.176 |
+| 7    | 2.166 | 1.085 | 3.423 |
+| 14   | 3.751 | 1.636 | 5.019 |
+| 28   | 6.922 | 1.821 | 5.292 |
+
+###### Features lags 1, 7, 14, 28
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1    | 0.536 | 0.576 | 1.827 |
+| 7    | 1.855 | 1.136 | 3.669 |
+| 14   | 1.606 | 1.006 | 3.103 |
+| 28   | 7.767 | 1.734 | 4.688 |
+
+
+
+##### 12 months
+
+###### No extra features
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1    | 1.507 | 0.803 | 2.622 |
+| 7    | 5.874 | 1.542 | 5.183 |
+| 14   | 9.936 | 2.307 | 7.804 |
+| 28   | 7.116 | 1.882 | 5.830 |
+
+###### Features lags 1, 7, 14, 28
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1    | 2.632 | 1.127 | 3.731 |
+| 7    | 2.019 | 1.122 | 3.483 |
+| 14   | 1.677 | 1.064 | 3.295 |
+| 28   | 2.838 | 1.350 | 4.171 |
+
+
+
+##### 18 months
+
+###### No extra features
+
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 2.399  | 0.899 | 2.896 |
+| 7    | 9.236  | 1.930 | 6.596 |
+| 14   | 13.532 | 2.281 | 7.953 |
+| 28   | 16.852 | 3.020 | 9.669 |
+
+###### Features lags 1, 7, 14, 28
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1    | 0.632 | 0.648 | 1.905 |
+| 7    | 3.944 | 1.347 | 4.179 |
+| 14   | 4.363 | 1.425 | 4.294 |
+| 28   | 6.176 | 2.011 | 5.951 |
+
+
+
+##### 24 months
+
+###### No extra features
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1    | 0.427 | 0.540 | 1.551 |
+| 7    | 1.210 | 0.864 | 2.497 |
+| 14   | 2.419 | 1.181 | 3.440 |
+| 28   | 5.593 | 1.648 | 4.635 |
+
+###### Features lags 1, 7, 14, 28
+
+| Lags | MSE    | MAE   | MAPE   |
+| :--- | ------ | ----- | ------ |
+| 1    | 0.939  | 0.693 | 2.0546 |
+| 7    | 4.398  | 1.376 | 4.326  |
+| 14   | 5.599  | 1.584 | 4.863  |
+| 28   | 10.911 | 2.574 | 7.411  |
+
+
+
+#### Model Finalization
+
+The grid search has been performed over the following ranges for each hyper-parameter:
+
+- C: [0.2, 0.4, 0.6, 0.8, 1. , 1.2, 1.4, 1.6, 1.8]
+- $\epsilon$: [0.02, 0.04, 0.06, 0.08, 0.1 , 0.12, 0.14, 0.16, 0.18]
+- kernel: ['linear', 'rbf']
+
+Cross-validation: 5 folds over 6 months 
+
+##### NRG
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1    | 0.532 | 0.584 | 1.841 |
+| 7    | 1.660 | 1.083 | 3.479 |
+| 14   | 1.534 | 0.968 | 3.000 |
+| 28   | 7.211 | 1.688 | 4.574 |
+
+Selected hyper-parameters: 
+
+- C: 1.8
+- $\epsilon$: 0.18
+- kernel: RBF
+
+##### VNO
+
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 2.827  | 1.318 | 3.811 |
+| 7    | 6.474  | 1.852 | 5.305 |
+| 14   | 7.113  | 2.043 | 5.336 |
+| 28   | 10.499 | 2.179 | 6.444 |
+
+Selected hyper-parameters: 
+
+- C: 1.8
+- $\epsilon$: 0.18
+- kernel: RBF
+
+##### MGM
+
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 1.771  | 1.100 | 4.639 |
+| 7    | 5.232  | 1.771 | 7.383 |
+| 14   | 9.548  | 2.430 | 9.745 |
+| 28   | 11.086 | 2.523 | 9.380 |
+
+Selected hyper-parameters: 
+
+- C: 0.2
+- $\epsilon$: 0.12
+- kernel: linear
+
+##### ABC
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1    | 5.359 | 1.738 | 1.710 |
+| 7    | 6.926 | 2.121 | 2.115 |
+| 14   | 6.491 | 1.762 | 1.736 |
+| 28   | 8.738 | 2.392 | 2.341 |
+
+Selected hyper-parameters: 
+
+- C: 1.8
+- $\epsilon$: 0.02
+- kernel: RBF
+
+##### ALGN
+
+| Lags | MSE      | MAE    | MAPE  |
+| :--- | -------- | ------ | ----- |
+| 1    | 140.075  | 8.920  | 2.165 |
+| 7    | 2229.026 | 32.542 | 7.476 |
+| 14   | 3233.779 | 38.610 | 8.555 |
+| 28   | 970.298  | 18.748 | 4.198 |
+
+Selected hyper-parameters: 
+
+- C: 1.8
+- $\epsilon$: 0.02
+- kernel: RBF
+
+##### DXCM
+
+| Lags | MSE     | MAE    | MAPE  |
+| :--- | ------- | ------ | ----- |
+| 1    | 321.172 | 14.799 | 4.208 |
+| 7    | 906.46  | 24.372 | 6.862 |
+| 14   | 981.718 | 26.242 | 6.977 |
+| 28   | 825.052 | 9.877  | 5.272 |
+
+Selected hyper-parameters: 
+
+- C: 0.4
+- $\epsilon$: 0.18
+- kernel: linear
+
+##### NVDA
+
+| Lags | MSE     | MAE    | MAPE  |
+| :--- | ------- | ------ | ----- |
+| 1    | 518.028 | 18.032 | 3.464 |
+| 7    | 425.651 | 15.256 | 2.908 |
+| 14   | 272.346 | 12.261 | 2.307 |
+| 28   | 221.789 | 10.938 | 2.042 |
+
+Selected hyper-parameters: 
+
+- C: 1.8
+- $\epsilon$: 0.02
+- kernel: RBF
+
+##### REGN
+
+| Lags | MSE      | MAE    | MAPE  |
+| :--- | -------- | ------ | ----- |
+| 1    | 173.962  | 9.363  | 1.657 |
+| 7    | 534.684  | 18.562 | 3.365 |
+| 14   | 1058.514 | 26.511 | 4.866 |
+| 28   | 914.402  | 6.744  | 4.961 |
+
+Selected hyper-parameters: 
+
+- C: 1.8
+- $\epsilon$: 0.18
+- kernel: linear
+
+##### ^GSPC
+
+| Lags | MSE       | MAE     | MAPE  |
+| :--- | --------- | ------- | ----- |
+| 1    | 3390.300  | 50.805  | 1.489 |
+| 7    | 14818.349 | 90.067  | 2.669 |
+| 14   | 23919.770 | 115.385 | 3.362 |
+| 28   | 16985.906 | 95.058  | 2.725 |
+
+Selected hyper-parameters: 
+
+- C: 1.8
+
+- $\epsilon$: 0.18
+
+- kernel: linear
+
+  
+
+### Model Evaluation and Validation (as above)
 In this section, the final model and any supporting qualities should be evaluated in detail. It should be clear how the final model was derived and why this model was chosen. In addition, some type of analysis should be used to validate the robustness of this model and its solution, such as manipulating the input data or environment to see how the model’s solution is affected (this is called sensitivity analysis). Questions to ask yourself when writing this section:
 - _Is the final model reasonable and aligning with solution expectations? Are the final parameters of the model appropriate?_
 - _Has the final model been tested with various inputs to evaluate whether the model generalizes well to unseen data?_
