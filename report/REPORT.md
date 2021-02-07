@@ -2,7 +2,7 @@ Machine Learning Engineer Nanodegree
 
 ## Capstone Project
 Marco Fagiani  
-January 20st, 2020
+February 7st, 2021
 
 ## I. Definition
 ### Project Overview
@@ -147,6 +147,13 @@ $$
 \hat{x} = \frac{x- \mu}{\sigma}
 $$
 
+#### Linear Regression
+
+The Linear Regression (LR) is a linear approach to modelling the relationship between a scalar response and one or more explanatory variables. A linear model with coefficients $w = (w_0, w_1, \dots, w_n)$ is fitted to minimize the residual sum of squares between the observed targets in the dataset, and the targets predicted by the linear approximation. Mathematically it solves a problem of the form: 
+$$
+\min_w \Vert{X \cdot w - y}\Vert^{2}_{2}
+$$
+
 
 #### Support Vector Regression
 
@@ -172,15 +179,13 @@ The experiments has been divided in tow main groups: model validation and model 
 
 ##### Model validation
 
-In the model validation the data has been split using a standard 70-30 approach, thus 70% of the data has been associated to the train set, and the remaining 30% to the test set. This split has been adopted to perform the validation of the the data normalization to adopt, the length of the train period, and extra  features selection. Moreover, the regression technique parameters have not been optimized in this phase, and the default ones have been adopted: kernel set to RBF, $\gamma$ set to 'scale' (thus value set as $1 / (n\_features * X.var())$), C set to 1, $\epsilon$ set to 1.
+In the model validation the data has been split fixing the data length for the test to 6 months, and varying data length for the train from 6 months to about 4 years, based on the evaluation performed.  A "full range" train, about 4 years, has has been adopted to perform the validation of the the data normalization. Whereas, the evaluation of both the length of the train period, and the extra features to select, has been performed assuming 3 different  lengths for the train data: 6 months, 1 year and 2 years. Moreover, the regression technique parameters have not been optimized in this phase, and the default ones have been adopted. In the case of LR, fit_intercept enabled, and normalize disabled. For the SVR, the kernel set to RBF, $\gamma$ set to 'scale' (thus value set as $1 / (n\_features * X.var())$), C set to 1, $\epsilon$ set to 1.
 
-In order to select the normalization to use, among none, Mean and Variance Normalization and Min-Max normalization, the data from 2016/01/01 to 2020/08/31 has been adopted.
+In order to select the normalization to use, among none, Mean and Variance Normalization and Min-Max normalization, the data from 2016/01/01 to 2021/02/05 has been adopted.
 
 Once the normalization has been selected, the same time range has been adopted to selected some extra feature to be introduced, extracted from the data, to achieve better results. The extra features selected are the difference for each input data, between the data at the time $t$ and the value of the previous 1, 7, 14, 28 days. Thus generating 4 set of features providing difference to different time lags.
 
  
-
-
 
 steps:
 
