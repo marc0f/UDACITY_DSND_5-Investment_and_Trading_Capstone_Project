@@ -33,7 +33,7 @@ def clean_data(data):
     return data
 
 
-def get_daily_historical(symbol: str, start_date: datetime, end_date: datetime):
+def get_daily_historical(symbol: str, start_date: datetime, end_date: datetime, min_length: int = None) -> object:
     """ smart function to retrieve ohlcv data in the daily interval, with both adjusted and not adjusted closing price.
       if a csv for the requested symbol already exists, read it and download only the data for the missing date ranges,
       otherwise -first run- retrieve full date range and store to csv """
@@ -99,7 +99,19 @@ def get_daily_historical(symbol: str, start_date: datetime, end_date: datetime):
 
     data = clean_data(data)
 
-    return data[start_date:end_date]
+    # if requested a min_length
+    if min_length:
+        if len(data) < min_length:
+            logger.warning("Data stored not enought to respect the requested minum lenght.")
+
+        else:
+            # slice data from end_Date back to a min_length
+            data = data[:end_date].iloc[-min_length:]
+
+    else:
+        data = data[start_date:end_date]
+
+    return data
 
 
 def _get_historical(symbol: str, start_date: datetime, end_date: datetime, interval: str):

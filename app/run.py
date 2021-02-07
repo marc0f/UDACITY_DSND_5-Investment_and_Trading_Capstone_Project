@@ -31,6 +31,7 @@ def index():
     start_date = end_date - datetime.timedelta(days=180)
 
     prediction_horizons = [1, 7, 14, 28]
+    features_lags = [14, 28]
 
     regression_result_1d = dict()
     regression_result_7d = dict()
@@ -46,7 +47,7 @@ def index():
         data = get_daily_historical(symbol, start_date, end_date)
 
         data = clean_data(data)
-        regression_input, _ = prepare_data(data.copy(), diffs=prediction_horizons)
+        regression_input, _ = prepare_data(data.copy(), diffs=features_lags)
         regression_input = regression_input[-1, :].reshape(1, -1)
 
         # compute predictions

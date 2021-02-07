@@ -234,13 +234,13 @@ def build_model():
     #     'vect__ngram_range': (1, 2)}
 
     parameters = {
-        # 'regres__estimator__C': np.arange(0.2, 2, step=0.2),
-        'regres__estimator__C': np.arange(0.2, 2, step=0.5),
+        'regres__estimator__C': np.arange(0.2, 2, step=0.2),
+        # 'regres__estimator__C': np.arange(0.2, 2, step=0.5),
         # 'regres__estimator__cache_size': 200,
         # 'regres__estimator__coef0': 0.0,
         # 'regres__estimator__degree': 3,
-        # 'regres__estimator__epsilon': np.arange(0.02, 0.2, step=0.02),
-        'regres__estimator__epsilon': np.arange(0.02, 0.2, step=0.1),
+        'regres__estimator__epsilon': np.arange(0.02, 0.2, step=0.02),
+        # 'regres__estimator__epsilon': np.arange(0.02, 0.2, step=0.1),
         # 'regres__estimator__gamma': 'scale',
         'regres__estimator__kernel': ['linear', 'rbf'],
         # 'regres__estimator__max_iter': -1,
@@ -249,7 +249,7 @@ def build_model():
     }
 
     # instantiate search grid
-    cv = GridSearchCV(pipeline, param_grid=[parameters, parameters, parameters, parameters], verbose=2)
+    cv = GridSearchCV(pipeline, param_grid=[parameters, parameters, parameters, parameters], verbose=1)
     return cv
     # return pipeline
 
@@ -305,24 +305,29 @@ def load_model(model_filepath):
 if __name__ == '__main__':
 
     prediction_horizons = [1, 7, 14, 28]  # steps of prediction in base resolution, i.e. days
+    features_lags = [14, 28]
+    test_len = 90  # days
+    train_len_months = 12  # months
+
+    dataset_len = test_len + train_len_months * 30 + max(prediction_horizons)  # days
+    if features_lags:
+        dataset_len += max(features_lags)
+
+    end_date = datetime.datetime.now() - datetime.timedelta(days=1)
+    start_date = end_date - datetime.timedelta(days=dataset_len)
 
     # train a model for each asset
     for symbol in list(DEFAULT_SYMBOLS.keys()):
 
         try:
-
             model_filepath = f"local_models/models_{symbol}.dump"
 
-            # train with latest data
-            end_date = datetime.datetime.now() - datetime.timedelta(days=1)
-            start_date = end_date - datetime.timedelta(days=30*6)
-
             # get OHLCV data
-            data = get_daily_historical(symbol, start_date, end_date)
+            data = get_daily_historical(symbol, start_date, end_date, min_length=dataset_len)
             data = clean_data(data)
-            samples, targets = prepare_data(data, delays=prediction_horizons, diffs=prediction_horizons)
+            samples, targets = prepare_data(data, delays=prediction_horizons, diffs=features_lags)
 
-            X_train, X_test, Y_train, Y_test = train_test_split(samples, targets, test_size=30) #test_size=30, test_size=0.2
+            X_train, X_test, Y_train, Y_test = train_test_split(samples, targets, test_size=test_len) #test_size=30, test_size=0.2
 
             print('Building model...')
             model = build_model()
