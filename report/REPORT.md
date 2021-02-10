@@ -67,13 +67,13 @@ The project has been performed over the following set of stocks:
   - DexCom Inc. ([DXCM](https://www.investopedia.com/markets/quote?tvwidgetsymbol=DXCM))
   - NVIDIA Corp. ([NVDA](https://www.investopedia.com/markets/quote?tvwidgetsymbol=NVDA))
   - Regeneron Pharmaceuticals Inc. ([REGN](https://www.investopedia.com/markets/quote?tvwidgetsymbol=REGN))
-  - S&P 500
+  - S&P 500 ([^GSPC](https://www.investopedia.com/terms/s/sp.asp))
 
 Considered the Top Stock till mid-2020 ([Investopedia](https://www.investopedia.com/top-stocks-4581225)).
 
-The stock data are retrieved using the Yahoo! Finance [API](https://pypi.org/project/yfinance/) and leveraging over the historical end-point to obtain the following data:
+The stock data are retrieved by using the Yahoo! Finance [API](https://pypi.org/project/yfinance/) and leveraging over the historical end-point. The obtained data have the following structure:
 
-```
+```tex
              Open   High    Low  Close  Adj Close   Volume  Dividends  Stock Splits
 Date                                                                               
 2009-12-31  23.90  24.00  23.61  23.61      20.67  1024900        0.0             0
@@ -83,11 +83,13 @@ Date
 2010-01-07  24.79  25.24  24.73  24.91      21.80  3200800        0.0             0
 ```
 
-Basically, the query is performed from the current UTC datetime back till the required range is obtained. The raw data is then stored in a dedicated CSV, for each symbol. In further queries are performed, if the CSV already exists, at first the data are read from it and only for the missing date range a new query toward the provider is performed. In case of a new query, the new data are integrate with the CSV one, and re-stored into the same CSV.
+Basically, the query is performed for the required window starting from the current UTC datetime. The raw data are then stored in a local dedicated CSV, for each symbol. These CSVs provide the starting points further queries. Specifically, if the application request again the data, at first the data are read from the dedicated CSV, and only for the missing date-range a new query, toward the data provider, is performed. The new data, them, are integrated within the dedicated CSV one.
+
+
 
 #### Data cleaning
 
-As said, the raw data are stored in to CSV. A cleaning procedure is performed only on the data before the utilization in the training, test, prediction phases. The only abnormality in the data is the presence of two columns, Dividends and Stock Splits, composed of only 0 values. Therefore, these columns are dropped in a dedicated clean function that detects columns with all equal values.
+As said, the raw data are stored into a CSV. A cleaning procedure is performed only once the data are being used in the training, test, or prediction phase. The only abnormality in the data is the presence of two columns, Dividends and Stock Splits, composed of only 0 values. Therefore, these columns are removed in a dedicated clean function that detects columns with all equal values.
 
 ```python
 def is_unique(s):
@@ -122,13 +124,17 @@ The developed dashboard displays the expected returns (predictions) a head of 1,
 
 ![Dashboard](imgs/dashboard_1.png)
 
+The dashboard utilizes the models pre-trained and stored in a dedicated folder. Instructions to create the models and make them available for the dashboard are reported in the README file in the repository.
+
 
 
 ### Algorithms and Techniques
 
+
+
 #### Data Normalization
 
-Once the data is clean (see below), the next step is to normalize the data. The normalization process can affects the data range (i.e., simple compression or expansion to get data in the [0, 1] range) or alters the data statistics, mean and variance.
+Once the data are cleaned (see below), the next step is to normalize the data. The normalization process can affects the data range (i.e., simple compression or expansion to get data in the [0, 1] range) or alters the data statistics, mean and variance.
 
 ##### Min-Max normalization (Normalizer)
 
@@ -147,15 +153,17 @@ $$
 \hat{x} = \frac{x- \mu}{\sigma}
 $$
 
-#### Linear Regression
+#### Regression
 
-The Linear Regression (LR) is a linear approach to modelling the relationship between a scalar response and one or more explanatory variables. A linear model with coefficients $w = (w_0, w_1, \dots, w_n)$ is fitted to minimize the residual sum of squares between the observed targets in the dataset, and the targets predicted by the linear approximation. Mathematically it solves a problem of the form: 
+##### Linear Regression
+
+The Linear Regression (LR) is a linear approach to modeling the relationship between a scalar response and one or more explanatory variables. A linear model with coefficients $w = (w_0, w_1, \dots, w_n)$ is fitted to minimize the residual sum of squares between the observed targets in the dataset, and the targets predicted by the linear approximation. Mathematically it solves a problem of the form: 
 $$
 \min_w \Vert{X \cdot w - y}\Vert^{2}_{2}
 $$
 
 
-#### Support Vector Regression
+##### Support Vector Regression
 
 The Support Vector Regression approach (SVR or SVM regression) is derived from the Support Vector Machine technique. The SVMs are binary classifiers that discriminate whether an input vector x belongs to class +1 or to class −1 based on the following discriminant function:
 $$
@@ -185,43 +193,16 @@ In order to select the normalization to use, among none, Mean and Variance Norma
 
 Once the normalization has been selected, the same time range has been adopted to selected some extra feature to be introduced, extracted from the data, to achieve better results. The extra features selected are the difference for each input data, between the data at the time $t$ and the value of the previous 1, 7, 14, 28 days. Thus generating 4 set of features providing difference to different time lags.
 
- 
-
-steps:
-
-- simple split 70%/30% with default parameters to evaluate:
-  - train length
-  - normalization type
-  - feature selection and evaluation
-- finally, CV 70/30 over set of parameters
-- 
-
-
-
 
 
 ##### Model finalization
 
-Cross-validation and grid search over the hyper-parameters
+The cross-validation and grid search are performed over the hyper-parameters of the selected approach. This stage produces as output the results achieved by the optimized models, one model for each assets, over the test data (unseen data). Moreover, the optimized models are store into dedicated files and used for the prediction provided by the developed dashboard.  
 
 
-
-###################
-
-In this section, you will need to discuss the algorithms and techniques you intend to use for solving the problem. You should justify the use of each one based on the characteristics of the problem and the problem domain. Questions to ask yourself when writing this section:
-- _Are the algorithms you will use, including any default variables/parameters in the project clearly defined?_
-- _Are the techniques to be used thoroughly discussed and justified?_
-- _Is it made clear how the input data or datasets will be handled by the algorithms and techniques chosen?_
-
-### Benchmark
-In this section, you will need to provide a clearly defined benchmark result or threshold for comparing across performances obtained by your solution. The reasoning behind the benchmark (in the case where it is not an established result) should be discussed. Questions to ask yourself when writing this section:
-- _Has some result or value been provided that acts as a benchmark for measuring performance?_
-- _Is it clear how this result or value was obtained (whether by data or by hypothesis)?_
 
 
 ## III. Methodology
-_(approx. 3-5 pages)_
-
 ### Data Preprocessing
 
 
@@ -255,7 +236,10 @@ In this section, all of your preprocessing steps will need to be clearly documen
 - _Based on the **Data Exploration** section, if there were abnormalities or characteristics that needed to be addressed, have they been properly corrected?_
 - _If no preprocessing is needed, has it been made clear why?_
 
+
+
 ### Implementation
+
 In this section, the process for which metrics, algorithms, and techniques that you implemented for the given data will need to be clearly documented. It should be abundantly clear how the implementation was carried out, and discussion should be made regarding any complications that occurred during this process. Questions to ask yourself when writing this section:
 - _Is it made clear how the algorithms and techniques were implemented with the given datasets or input data?_
 - _Were there any complications with the original metrics or techniques that required changing prior to acquiring a solution?_
@@ -269,17 +253,9 @@ In this section, you will need to discuss the process of improvement you made up
 
 
 ## IV. Results
-_(approx. 2-3 pages)_
-
-
-
 ### Model validation
 
-Symbols: NRG
-
-
-
-
+The preliminary validation of the model has been performed for the symbol NRG. The performed validation performed concerned the selection of the normalization approach, the selection of the extra features and of a suitable time length for the train data. Specifically, a low number of data in the train phase could produce a model that can not represent the data behavior, on the other hand too much data in the train set could produce a bad model due to the presence of different behavior in the data and cause to have huge time required to train the model itself.    
 
 #### Normalizations
 
@@ -287,151 +263,371 @@ The adopted data range goes from 2016/01/01 to 2020/08/31, 56 months using as fe
 
 Different normalization techniques can be compared only over MAPE metric.
 
-##### No Normalization Results
+##### Linear Regression
+
+###### No Normalization Results
 
 | Lags | MSE      | MAE   | MAPE   |
 | :--- | -------- | ----- | ------ |
-| 1    | 99.540   | 8.000 | 44.344 |
-| 7    | 100.571. | 7.968 | 44.133 |
-| 14   | 102.507  | 7.997 | 44.266 |
-| 28   | 105.087  | 8.111 | 44.794 |
+| 1     | 0.416  | 0.472 | 1.953 |
+| 7     | 2.458  | 1.081 | 4.633 |
+| 14    | 6.308  | 1.602 | 6.954 |
+| 28    | 11.476 | 2.512 | 9.836 |
 
-
-
-##### Mean and Variance Normalization Results
+###### Mean and Variance Normalization Results
 
 | Lags | MSE   | MAE   | MAPE  |
 | :--- | ----- | ----- | ----- |
-| 1    | 0.627 | 0.558 | 2.416 |
-| 7    | 2.332 | 1.105 | 4.676 |
-| 14   | 4.838 | 1.503 | 6.436 |
-| 28   | 7.993 | 2.048 | 8.356 |
+| 1     | 0.416  | 0.472 | 1.953 |
+| 7     | 2.458  | 1.081 | 4.633 |
+| 14    | 6.308  | 1.602 | 6.954 |
+| 28    | 11.476 | 2.512 | 9.836 |
 
-
-
-##### Min and Max Normalization Results
+###### Min and Max Normalization Results
 
 | Lags | MSE     | MAE   | MAPE   |
 | :--- | ------- | ----- | ------ |
-| 1    | 113.634 | 9.060 | 52.394 |
-| 7    | 113.680 | 8.996 | 52.263 |
-| 14   | 112.249 | 8.935 | 50.924 |
-| 28   | 110.058 | 8.734 | 49.794 |
+| 1     | 28.465 | 4.494 | 20.839 |
+| 7     | 28.066 | 4.420 | 20.728 |
+| 14    | 32.006 | 4.789 | 22.613 |
+| 28    | 36.591 | 4.892 | 21.931 |
+
+##### SVR
+
+###### No Normalization Results
+
+| Lags | MSE      | MAE   | MAPE   |
+| :--- | -------- | ----- | ------ |
+| 1     | 69.518 | 6.674 | 6.674  |
+| 7     | 68.354 | 6.557 | 34.760 |
+| 14    | 72.687 | 6.855 | 36.336 |
+| 28    | 74.147 | 6.888 | 34.764 |
+
+###### Mean and Variance Normalization Results
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.405 | 0.462 | 2.093 |
+| 7     | 2.483 | 1.078 | 4.585 |
+| 14    | 5.809 | 1.422 | 6.134 |
+| 28    | 9.575 | 2.082 | 8.129 |
+
+###### Min and Max Normalization Results
+
+| Lags | MSE     | MAE   | MAPE   |
+| :--- | ------- | ----- | ------ |
+| 1     | 106.609 | 8.202 | 49.153 |
+| 7     | 106.882 | 8.247 | 49.327 |
+| 14    | 107.710 | 8.262 | 49.390 |
+| 28    | 101.141 | 7.954 | 44.961 |
 
 
-
-Selected normalization: Mean and Variance Normalization
-
+As shown in the tables above, for both models can be selected as normalization technique the  Mean and Variance Normalization. Therefore, from now on the reported resutls have been achieved always by applying the selected normalizatioon.
 
 
 #### Data ranges and Features Selection
 
-##### 6 months
+##### 1 year of train data
+
+###### Linear Regression
 
 ###### No extra features
 
 | Lags | MSE   | MAE   | MAPE  |
 | :--- | ----- | ----- | ----- |
-| 1    | 0.738 | 0.692 | 2.176 |
-| 7    | 2.166 | 1.085 | 3.423 |
-| 14   | 3.751 | 1.636 | 5.019 |
-| 28   | 6.922 | 1.821 | 5.292 |
+| 1     | 0.404  | 0.492 | 1.447 |
+| 7     | 2.883  | 1.277 | 3.776 |
+| 14    | 4.769  | 1.763 | 4.969 |
+| 28    | 13.004 | 2.723 | 8.073 |
+
+###### Features lags 1
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.434  | 0.518 | 1.519 |
+| 7     | 2.902  | 1.264 | 3.736 |
+| 14    | 4.738  | 1.801 | 5.085 |
+| 28    | 13.161 | 2.758 | 8.197 |
+
+###### Features lags 7
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.379  | 0.476 | 1.401 |
+| 7     | 3.005  | 1.318 | 3.897 |
+| 14    | 5.460  | 1.879 | 5.317 |
+| 28    | 13.448 | 2.767 | 8.182 |
+
+
+###### Features lags 14
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.387  | 0.485 | 1.427 |
+| 7     | 0.387  | 0.485 | 1.427 |
+| 14    | 4.881  | 1.777 | 4.998 |
+| 28    | 12.897 | 2.703 | 8.022 |
+
+###### Features lags 28
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.400  | 0.486 | 1.432 |
+| 7     | 2.922  | 1.302 | 3.854 |
+| 14    | 4.812  | 1.758 | 4.955 |
+| 28    | 12.713 | 2.767 | 8.183 |
+
+
+###### Features lags 14 and 28
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.406 | 0.493 | 1.451 |
+| 7     | 2.710 | 1.271 | 3.742 |
+| 14    | 5.053 | 1.784 | 5.018 |
+| 28    | 12.560 | 2.698 | 7.969 |
 
 ###### Features lags 1, 7, 14, 28
 
 | Lags | MSE   | MAE   | MAPE  |
 | :--- | ----- | ----- | ----- |
-| 1    | 0.536 | 0.576 | 1.827 |
-| 7    | 1.855 | 1.136 | 3.669 |
-| 14   | 1.606 | 1.006 | 3.103 |
-| 28   | 7.767 | 1.734 | 4.688 |
+| 1     | 0.434  | 0.528 | 1.548 |
+| 7     | 2.824  | 1.319 | 3.874 |
+| 14    | 5.583  | 1.908 | 5.369 |
+| 28    | 12.770 | 2.731 | 8.058 |
 
-
-
-##### 12 months
+###### SVR
 
 ###### No extra features
 
 | Lags | MSE   | MAE   | MAPE  |
 | :--- | ----- | ----- | ----- |
-| 1    | 1.507 | 0.803 | 2.622 |
-| 7    | 5.874 | 1.542 | 5.183 |
-| 14   | 9.936 | 2.307 | 7.804 |
-| 28   | 7.116 | 1.882 | 5.830 |
+| 1     | 0.530  | 0.547 | 1.598 |
+| 7     | 3.259  | 1.291 | 3.831 |
+| 14    | 4.912  | 1.601 | 4.559 |
+| 28    | 13.913 | 2.615 | 7.754 |
+
+###### Features lags 1
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.923  | 0.663 | 1.901 |
+| 7     | 3.910  | 1.438 | 4.197 |
+| 14    | 5.617  | 1.804 | 5.097 |
+| 28    | 13.975 | 2.683 | 7.958 |
+
+###### Features lags 7
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.603  | 0.552 | 1.605 |
+| 7     | 2.972  | 1.265 | 3.720 |
+| 14    | 4.825  | 1.609 | 4.595 |
+| 28    | 13.471 | 2.662 | 7.899 |
+
+
+###### Features lags 14
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.530  | 0.550 | 1.606 |
+| 7     | 2.349  | 1.188 | 3.455 |
+| 14    | 4.835  | 1.651 | 4.691 |
+| 28    | 13.340 | 2.555 | 7.587 |
+
+###### Features lags 28
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.521  | 0.557 | 1.629 |
+| 7     | 3.030  | 1.251 | 3.715 |
+| 14    | 4.983  | 1.621 | 4.596 |
+| 28    | 12.789 | 2.442 | 7.251 |
+
+###### Features lags 14 and 28
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.635  | 0.611 | **1.789** |
+| 7     | 2.459  | 1.199 | **3.516** |
+| 14    | 4.791  | 1.618 | **4.588** |
+| 28    | 12.714 | 2.455 | **7.321** |
 
 ###### Features lags 1, 7, 14, 28
 
 | Lags | MSE   | MAE   | MAPE  |
 | :--- | ----- | ----- | ----- |
-| 1    | 2.632 | 1.127 | 3.731 |
-| 7    | 2.019 | 1.122 | 3.483 |
-| 14   | 1.677 | 1.064 | 3.295 |
-| 28   | 2.838 | 1.350 | 4.171 |
+| 1     | 0.965  | 0.700 | 2.029 |
+| 7     | 3.146  | 1.303 | 3.813 |
+| 14    | 5.221  | 1.690 | 4.780 |
+| 28    | 12.755 | 2.536 | 7.595 |
 
 
+##### 2  years of train data
 
-##### 18 months
+###### Linear Regression
 
 ###### No extra features
 
-| Lags | MSE    | MAE   | MAPE  |
-| :--- | ------ | ----- | ----- |
-| 1    | 2.399  | 0.899 | 2.896 |
-| 7    | 9.236  | 1.930 | 6.596 |
-| 14   | 13.532 | 2.281 | 7.953 |
-| 28   | 16.852 | 3.020 | 9.669 |
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.607  | 0.508 | 1.543 |
+| 7     | 4.128  | 1.407 | 4.487 |
+| 14    | 9.052  | 2.164 | 6.947 |
+| 28    | 12.561 | 2.620 | 8.155 |
+
+###### Features lags 1
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.626  | 0.513 | 1.549 |
+| 7     | 4.042  | 1.373 | 4.344 |
+| 14    | 8.846  | 2.111 | 6.766 |
+| 28    | 12.717 | 2.656 | 8.219 |
+
+###### Features lags 7
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.602  | 0.500 | 1.513 |
+| 7     | 3.971  | 1.370 | 4.345 |
+| 14    | 8.611  | 2.109 | 6.734 |
+| 28    | 12.193 | 2.625 | 8.153 |
+
+###### Features lags 14
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.615  | 0.511 | 1.552 |
+| 7     | 4.061  | 1.426 | 4.520 |
+| 14    | 9.456  | 2.173 | 6.962 |
+| 28    | 12.252 | 2.559 | 7.978 |
+
+###### Features lags 28
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.665  | 0.522 | 1.578 |
+| 7     | 3.939  | 1.331 | 4.261 |
+| 14    | 8.626  | 2.072 | 6.666 |
+| 28    | 12.276 | 2.612 | 8.132 |
+
+###### Features lags 14 and 28
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.675  | 0.525 | 1.587 |
+| 7     | 3.938  | 1.370 | 4.360 |
+| 14    | 9.272  | 2.151 | 6.897 |
+| 28    | 12.278 | 2.566 | 8.007 |
 
 ###### Features lags 1, 7, 14, 28
 
 | Lags | MSE   | MAE   | MAPE  |
 | :--- | ----- | ----- | ----- |
-| 1    | 0.632 | 0.648 | 1.905 |
-| 7    | 3.944 | 1.347 | 4.179 |
-| 14   | 4.363 | 1.425 | 4.294 |
-| 28   | 6.176 | 2.011 | 5.951 |
+| 1     | 0.675  | 0.525 | 1.587 |
+| 7     | 3.938  | 1.370 | 4.360 |
+| 14    | 9.272  | 2.151 | 6.897 |
+| 28    | 12.278 | 2.566 | 8.007 |
 
-
-
-##### 24 months
+###### SVR
 
 ###### No extra features
 
 | Lags | MSE   | MAE   | MAPE  |
 | :--- | ----- | ----- | ----- |
-| 1    | 0.427 | 0.540 | 1.551 |
-| 7    | 1.210 | 0.864 | 2.497 |
-| 14   | 2.419 | 1.181 | 3.440 |
-| 28   | 5.593 | 1.648 | 4.635 |
+| 1     | 0.776  | 0.619 | 1.864 |
+| 7     | 4.569  | 1.492 | 4.748 |
+| 14    | 9.040  | 2.120 | 6.825 |
+| 28    | 12.276 | 2.473 | 7.780 |
+
+###### Features lags 1
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 1.632  | 0.795 | 2.354 |
+| 7     | 5.858  | 1.655 | 5.187 |
+| 14    | 9.040  | 2.164 | 6.966 |
+| 28    | 12.579 | 2.589 | 8.030 |
+
+###### Features lags 7
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.818  | 0.636 | 1.896 |
+| 7     | 4.118  | 1.411 | 4.463 |
+| 14    | 8.454  | 2.100 | 6.729 |
+| 28    | 11.991 | 2.526 | 7.917 |
+
+###### Features lags 14
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.949  | 0.705 | 2.124 |
+| 7     | 3.976  | 1.463 | 4.644 |
+| 14    | 9.242  | 2.135 | 6.891 |
+| 28    | 11.824 | 2.392 | 7.511 |
+
+###### Features lags 28
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.763  | 0.589 | 1.767 |
+| 7     | 4.433  | 1.444 | 4.592 |
+| 14    | 9.098  | 2.013 | 6.528 |
+| 28    | 11.817 | 2.365 | 7.476 |
+
+###### Features lags 14 and 28
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 0.959  | 0.728 | 2.181 |
+| 7     | 4.034  | 1.411 | 4.448 |
+| 14    | 8.982  | 2.076 | 6.657 |
+| 28    | 11.490 | 2.354 | 7.395 |
 
 ###### Features lags 1, 7, 14, 28
 
-| Lags | MSE    | MAE   | MAPE   |
-| :--- | ------ | ----- | ------ |
-| 1    | 0.939  | 0.693 | 2.0546 |
-| 7    | 4.398  | 1.376 | 4.326  |
-| 14   | 5.599  | 1.584 | 4.863  |
-| 28   | 10.911 | 2.574 | 7.411  |
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1     | 1.630  | 0.891 | 2.668 |
+| 7     | 5.322  | 1.591 | 4.969 |
+| 14    | 9.161  | 2.147 | 6.866 |
+| 28    | 11.813 | 2.444 | 7.579 |
+
+##### Considerations
+
+The extra features have been evaluated over 2 different time lengths for the train data, 1 and 2 years, with both Linear Regression and SVR. The average best performance, across all the lags, have been obtained by adopting lags of 14 and 28 days in the features and adopting the SVR model. Therefore, the selection of the final model has been performed by using 1 year of train data (from present date to past), all data plus 2 extra features with differences at 14 and 28 days of lag, and the SVR model.   
 
 
 
-#### Model Finalization
+#### Model Evaluation and Validation
 
-The grid search has been performed over the following ranges for each hyper-parameter:
+As reported above, SVR has been selected to create the final models. A grid search has been performed to optimize the parameters, by dividing the train data in 5 folds and adopting the following ranges for each hyper-parameter:
 
 - C: [0.2, 0.4, 0.6, 0.8, 1. , 1.2, 1.4, 1.6, 1.8]
 - $\epsilon$: [0.02, 0.04, 0.06, 0.08, 0.1 , 0.12, 0.14, 0.16, 0.18]
 - kernel: ['linear', 'rbf']
 
-Cross-validation: 5 folds over 6 months 
+The grid search has been performed over each selected assets, producing the dedicated model for each asset. To provide a complete overview of the model performance also the performance of the train dataset are reported.
 
 ##### NRG
 
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1    | 0.532 | 0.584 | 1.841 |
-| 7    | 1.660 | 1.083 | 3.479 |
-| 14   | 1.534 | 0.968 | 3.000 |
-| 28   | 7.211 | 1.688 | 4.574 |
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 0.514  | 0.544 | 1.602 |
+| 7     | 2.260  | 1.178 | 3.542 |
+| 14    | 4.853  | 1.611 | 4.564 |
+| 28    | 12.562 | 2.425 | 5.731 |
+
+###### Train data performance
+
+| Lags: | MSE   | MAE   | MAPE  |
+| ----- | ----- | ----- | ----- |
+| 1     | 0.729 | 0.534 | 1.761 |
+| 7     | 2.301 | 1.000 | 3.071 |
+| 14    | 5.514 | 1.422 | 4.490 |
+| 28    | 9.048 | 1.844 | 5.731 |
 
 Selected hyper-parameters: 
 
@@ -441,12 +637,45 @@ Selected hyper-parameters:
 
 ##### VNO
 
-| Lags | MSE    | MAE   | MAPE  |
-| :--- | ------ | ----- | ----- |
-| 1    | 2.827  | 1.318 | 3.811 |
-| 7    | 6.474  | 1.852 | 5.305 |
-| 14   | 7.113  | 2.043 | 5.336 |
-| 28   | 10.499 | 2.179 | 6.444 |
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 2.364  | 1.188 | 2.715 |
+| 7     | 9.021  | 2.187 | 5.137 |
+| 14    | 14.593 | 2.463 | 5.939 |
+| 28    | 26.085 | 3.426 | 7.968 |
+
+###### Train data performance
+
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 2.428  | 1.097 | 2.395 |
+| 7     | 10.261 | 2.135 | 4.911 |
+| 14    | 22.402 | 2.916 | 6.846 |
+| 28    | 41.997 | 3.853 | 9.385 |
+
+Selected hyper-parameters: 
+
+- C: 0.2
+- $\epsilon$: 0.18
+- kernel: linear
+
+##### MGM
+
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 2.345  | 0.774 | 3.415  |
+| 7     | 5.974  | 1.536 | 6.715  |
+| 14    | 9.378  | 1.755 | 9.279  |
+| 28    | 12.071 | 2.265 | 10.667 |
+
+###### Train data performance
+
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 1.554  | 0.714 | 3.727  |
+| 7     | 3.234  | 1.197 | 5.616  |
+| 14    | 6.534  | 1.675 | 8.092  |
+| 28    | 12.461 | 2.279 | 11.997 |
 
 Selected hyper-parameters: 
 
@@ -454,127 +683,159 @@ Selected hyper-parameters:
 - $\epsilon$: 0.18
 - kernel: RBF
 
-##### MGM
-
-| Lags | MSE    | MAE   | MAPE  |
-| :--- | ------ | ----- | ----- |
-| 1    | 1.771  | 1.100 | 4.639 |
-| 7    | 5.232  | 1.771 | 7.383 |
-| 14   | 9.548  | 2.430 | 9.745 |
-| 28   | 11.086 | 2.523 | 9.380 |
-
-Selected hyper-parameters: 
-
-- C: 0.2
-- $\epsilon$: 0.12
-- kernel: linear
-
 ##### ABC
 
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1    | 5.359 | 1.738 | 1.710 |
-| 7    | 6.926 | 2.121 | 2.115 |
-| 14   | 6.491 | 1.762 | 1.736 |
-| 28   | 8.738 | 2.392 | 2.341 |
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 4.369  | 1.609 | 1.824 |
+| 7     | 14.438 | 2.844 | 3.162 |
+| 14    | 22.227 | 3.771 | 4.262 |
+| 28    | 28.804 | 4.370 | 4.917 |
+
+###### Train data performance
+
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 3.699  | 1.374 | 1.571 |
+| 7     | 12.027 | 2.674 | 3.029 |
+| 14    | 20.948 | 3.467 | 3.918 |
+| 28    | 27.919 | 4.220 | 4.659 |
 
 Selected hyper-parameters: 
 
 - C: 1.8
-- $\epsilon$: 0.02
-- kernel: RBF
+- $\epsilon$: 0.1
+- kernel: linear
 
 ##### ALGN
 
-| Lags | MSE      | MAE    | MAPE  |
-| :--- | -------- | ------ | ----- |
-| 1    | 140.075  | 8.920  | 2.165 |
-| 7    | 2229.026 | 32.542 | 7.476 |
-| 14   | 3233.779 | 38.610 | 8.555 |
-| 28   | 970.298  | 18.748 | 4.198 |
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 249.247  | 8.398  | 3.152  |
+| 7     | 880.574  | 19.703 | 7.934  |
+| 14    | 1542.940 | 27.789 | 10.243 |
+| 28    | 2776.850 | 39.507 | 15.041 |
+
+###### Train data performance
+
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 79.192   | 5.836  | 2.210  |
+| 7     | 607.769  | 16.418 | 6.146  |
+| 14    | 1306.095 | 24.357 | 9.386  |
+| 28    | 3098.407 | 40.478 | 15.275 |
 
 Selected hyper-parameters: 
 
 - C: 1.8
-- $\epsilon$: 0.02
-- kernel: RBF
+- $\epsilon$: 0.14
+- kernel: linear
 
 ##### DXCM
 
-| Lags | MSE     | MAE    | MAPE  |
-| :--- | ------- | ------ | ----- |
-| 1    | 321.172 | 14.799 | 4.208 |
-| 7    | 906.46  | 24.372 | 6.862 |
-| 14   | 981.718 | 26.242 | 6.977 |
-| 28   | 825.052 | 9.877  | 5.272 |
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 56.783   | 5.323  | 2.235  |
+| 7     | 601.593  | 17.280 | 7.138  |
+| 14    | 1055.302 | 23.418 | 9.098  |
+| 28    | 1812.322 | 30.270 | 11.736 |
+
+###### Train data performance
+
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 88.322   | 6.313  | 2.364  |
+| 7     | 549.481  | 15.895 | 6.179  |
+| 14    | 998.461  | 23.151 | 8.971  |
+| 28    | 1642.233 | 30.004 | 11.413 |
 
 Selected hyper-parameters: 
 
-- C: 0.4
+- C: 0.8
 - $\epsilon$: 0.18
 - kernel: linear
 
 ##### NVDA
 
-| Lags | MSE     | MAE    | MAPE  |
-| :--- | ------- | ------ | ----- |
-| 1    | 518.028 | 18.032 | 3.464 |
-| 7    | 425.651 | 15.256 | 2.908 |
-| 14   | 272.346 | 12.261 | 2.307 |
-| 28   | 221.789 | 10.938 | 2.042 |
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 108.555  | 6.863  | 2.398  |
+| 7     | 437.397  | 14.998 | 5.750  |
+| 14    | 1031.137 | 22.350 | 8.550  |
+| 28    | 1213.786 | 27.880 | 10.469 |
 
-Selected hyper-parameters: 
+###### Train data performance
 
-- C: 1.8
-- $\epsilon$: 0.02
-- kernel: RBF
-
-##### REGN
-
-| Lags | MSE      | MAE    | MAPE  |
-| :--- | -------- | ------ | ----- |
-| 1    | 173.962  | 9.363  | 1.657 |
-| 7    | 534.684  | 18.562 | 3.365 |
-| 14   | 1058.514 | 26.511 | 4.866 |
-| 28   | 914.402  | 6.744  | 4.961 |
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 81.539   | 6.037  | 2.041  |
+| 7     | 391.948  | 14.098 | 5.027  |
+| 14    | 610.338  | 17.908 | 6.602  |
+| 28    | 1179.813 | 24.854 | 9.820  |
 
 Selected hyper-parameters: 
 
 - C: 1.8
 - $\epsilon$: 0.18
+- kernel: linear
+
+##### REGN
+
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 161.340  | 8.438  | 1.855 |
+| 7     | 661.287  | 19.323 | 4.313 |
+| 14    | 802.561  | 21.528 | 5.131 |
+| 28    | 1668.375 | 32.015 | 7.817 |
+
+###### Train data performance
+
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 118.642  | 7.622  | 1.683 |
+| 7     | 528.601  | 17.004 | 3.970 |
+| 14    | 1015.426 | 24.228 | 5.549 |
+| 28    | 2181.913 | 36.453 | 8.455 |
+
+Selected hyper-parameters: 
+
+- C: 1.0
+- $\epsilon$: 0.02
 - kernel: linear
 
 ##### ^GSPC
 
-| Lags | MSE       | MAE     | MAPE  |
-| :--- | --------- | ------- | ----- |
-| 1    | 3390.300  | 50.805  | 1.489 |
-| 7    | 14818.349 | 90.067  | 2.669 |
-| 14   | 23919.770 | 115.385 | 3.362 |
-| 28   | 16985.906 | 95.058  | 2.725 |
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 2524.788  | 30.201  | 1.022 |
+| 7     | 15242.288 | 73.572  | 2.517 |
+| 14    | 27281.701 | 94.202  | 3.260 |
+| 28    | 24082.816 | 106.108 | 3.433 |
+
+###### Train data performance
+
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 1975.176  | 28.735  | 0.960 |
+| 7     | 11072.803 | 66.578  | 2.214 |
+| 14    | 27731.105 | 94.791  | 3.242 |
+| 28    | 54112.979 | 130.876 | 4.563 |
 
 Selected hyper-parameters: 
 
 - C: 1.8
-
 - $\epsilon$: 0.18
-
 - kernel: linear
 
-  
+#### Considerations
 
-### Model Evaluation and Validation (as above)
-In this section, the final model and any supporting qualities should be evaluated in detail. It should be clear how the final model was derived and why this model was chosen. In addition, some type of analysis should be used to validate the robustness of this model and its solution, such as manipulating the input data or environment to see how the model’s solution is affected (this is called sensitivity analysis). Questions to ask yourself when writing this section:
-- _Is the final model reasonable and aligning with solution expectations? Are the final parameters of the model appropriate?_
-- _Has the final model been tested with various inputs to evaluate whether the model generalizes well to unseen data?_
-- _Is the model robust enough for the problem? Do small perturbations (changes) in training data or the input space greatly affect the results?_
-- _Can results found from the model be trusted?_
+Some models presents a slightly deviation from the expected max MAPE + 5%, in particular in the results with 28 days of prediction horizon.
 
-### Justification
-In this section, your model’s final solution and its results should be compared to the benchmark you established earlier in the project using some type of statistical analysis. You should also justify whether these results and the solution are significant enough to have solved the problem posed in the project. Questions to ask yourself when writing this section:
-- _Are the final results found stronger than the benchmark result reported earlier?_
-- _Have you thoroughly analyzed and discussed the final solution?_
-- _Is the final solution significant enough to have solved the problem?_
+Overall the performance achieved with the train data are almost equal or lower than the performance of the test set (unseen data), thus no over-fitting has been experienced.  Despite the availability of the RBF kernel, a linear one seems a preferred choice for most of the assets.
+
+Moreover, as reported in the previous section, 1 year has been selected fro the train data base on the average performance achieved. In any case, the performance achieved with 2 years of train data are close to the performance with 1 year data. Thus denoting a model robust to small perturbations in train data.  
+
+ 
 
 
 ## V. Conclusion

@@ -11,20 +11,15 @@ At first have a look of the retrieved data by running:
 
     python data_retriever/data_analysis.py
 
+Create or update the models by running :
 
-Create update models by running:
+**NOTE**: this phase can take several minutes, because an hyper-parameters search grid is performed.
 
     python models/train_regressor.py
 
-The updated model for each asset is stored in the folder _models/local_models_. To use in production a specifi model,
-copy/move it into the folder  _models/production_models_
+The updated model for each asset is stored in the folder _models/local_models_. To use in production a specific model, copy/move it into the folder _models/production_models_
 
 
-## TODO
-
-- dashboard: display last N-days of data and provides prediction points (1, 7, 14, 28 days) (vertical stuck of plots).
-- dashboard: top view provides a quick oerview of available symbols and reports estimated pct change at different
-horizon times, together with color box: light to dark green for increasing positive returns, light to dark red for increasing negative returns.
 
 
 ## References
