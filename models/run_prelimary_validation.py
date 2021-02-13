@@ -113,37 +113,6 @@ def data_generator(data, labels=None, lookback=0, delays=[0], indexes=None, shuf
     if batch_size == 0:
         batch_size = max_index + 1
 
-    # while True:
-    #     if shuffle:
-    #         rows = np.random.randint(
-    #             min_index + lookback, max_index, size=batch_size)
-    #     else:
-    #         if i + batch_size >= max_index:
-    #             i = min_index + lookback  # reset index
-    #
-    #         rows = np.arange(i, min(i + batch_size, max_index + 1))
-    #         i += len(rows)
-    #     if lookback == 0:
-    #         samples = np.zeros((len(rows),
-    #                             data.shape[-1]))
-    #
-    #     else:
-    #         samples = np.zeros((len(rows),
-    #                             lookback // step,
-    #                             data.shape[-1]))
-    #
-    #     targets = np.zeros((len(rows),))
-    #     for j, row in enumerate(rows):
-    #         if lookback == 0:
-    #             indices = [rows[j]]
-    #
-    #         else:
-    #             indices = range(rows[j] - lookback, rows[j], step)
-    #
-    #         samples[j] = data[support_index[indices]]
-    #         targets[j] = labels[support_index[rows[j] + delay]]
-    #     yield samples, targets
-
     if shuffle:
         rows = np.random.randint(
             min_index + lookback, max_index, size=batch_size)

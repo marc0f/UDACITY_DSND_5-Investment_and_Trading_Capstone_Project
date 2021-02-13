@@ -83,28 +83,7 @@ Date
 2010-01-07  24.79  25.24  24.73  24.91      21.80  3200800        0.0             0
 ```
 
-Basically, the query is performed for the required window starting from the current UTC datetime. The raw data are then stored in a local dedicated CSV, for each symbol. These CSVs provide the starting points further queries. Specifically, if the application request again the data, at first the data are read from the dedicated CSV, and only for the missing date-range a new query, toward the data provider, is performed. The new data, them, are integrated within the dedicated CSV one.
-
-
-
-#### Data cleaning
-
-As said, the raw data are stored into a CSV. A cleaning procedure is performed only once the data are being used in the training, test, or prediction phase. The only abnormality in the data is the presence of two columns, Dividends and Stock Splits, composed of only 0 values. Therefore, these columns are removed in a dedicated clean function that detects columns with all equal values.
-
-```python
-def is_unique(s):
-    a = s.to_numpy() # s.values (pandas<0.24)
-    return (a[0] == a).all()
-
-
-def clean_data(data):
-    """ remove nans or constant values columns, or drop equals columns"""
-
-    for col_name in list(data.columns):
-        if is_unique(data[col_name]):
-            logger.info(f"Column {col_name} has unique values..removed.")
-            data.drop(columns=col_name, inplace=True)
-```
+The data at the maximum resolution available, 1 day, are retrieved.
 
 
 
@@ -205,51 +184,668 @@ The cross-validation and grid search are performed over the hyper-parameters of 
 ## III. Methodology
 ### Data Preprocessing
 
+As introduced in the Project Overview the data pipeline is composed by 3 parts:
 
+- data retrieving;
+- data modeling;
+- data visualization. 
 
-```python
-data = get_daily_historical(symbol, start_date, end_date)
-data = clean_data(data)
-samples, targets = prepare_data(data, delays=prediction_horizons, diffs=prediction_horizons)
-```
+Basically, the data retrieving stage queries the required window of data starting from the current UTC datetime. The raw data are then stored in a local dedicated CSV, for each symbol. These CSVs provide the starting points further queries. Specifically, if the application requests again the data, at first the data are read from the dedicated CSV, and only for the missing date-range a new query, toward the data provider, is performed. The new data, them, are integrated within the dedicated CSV one.
 
+A cleaning procedure is performed only once the data are being used in the training, test, or prediction phase. The only abnormality in the data is the presence of two columns, Dividends and Stock Splits, composed of only 0 values. Therefore, these columns are removed in a dedicated clean function that detects columns with all equal values.
 
+The data modelling stage begins after the data cleaning. At first, the data are elaborate to create "samples" data, or "features" data, and the "target" data, thus the "labels" used to train and evaluate the model performance. The further step concerns the data splitting. Based on the selected prediction horizons, the minimum required length for the test data is computed and therefore the data are split in train and test.
 
-```python
+The train data are then provided to training algorithm that will take care to perform the data normalization, if selected, and trains different regressors for the different target prediction horizon. In the model validation stage the model is simple fitted neither applying a hyper-parameters optimization (grid search) nor splitting the data in folds to perform a cross-validation.      
 
+Once trained the model is validated using the test data and computing the selected metrics.
 
-pipeline = Pipeline([
-    ('scaler', StandardScaler()),
-    # ('scaler', Normalizer()),
-    ('regres', MultiOutputRegressor(SVR(), n_jobs=num_cpus))
-    # ('regres', SVR())
-])
-```
-
-
-
-#####
-
-In this section, all of your preprocessing steps will need to be clearly documented, if any were necessary. From the previous section, any of the abnormalities or characteristics that you identified about the dataset will be addressed and corrected here. Questions to ask yourself when writing this section:
-
-- _If the algorithms chosen require preprocessing steps like feature selection or feature transformations, have they been properly documented?_
-- _Based on the **Data Exploration** section, if there were abnormalities or characteristics that needed to be addressed, have they been properly corrected?_
-- _If no preprocessing is needed, has it been made clear why?_
+The data visualization (dashboard) shared the same data retrieving phase, but once the test data are prepared , the model is fed with these data to provide a prediction. This output is combined with the retrieved data and provided together in the data visualization. The dashboard also reports the value of the expected percentage returns for each prediction horizon.      
 
 
 
 ### Implementation
 
-In this section, the process for which metrics, algorithms, and techniques that you implemented for the given data will need to be clearly documented. It should be abundantly clear how the implementation was carried out, and discussion should be made regarding any complications that occurred during this process. Questions to ask yourself when writing this section:
-- _Is it made clear how the algorithms and techniques were implemented with the given datasets or input data?_
-- _Were there any complications with the original metrics or techniques that required changing prior to acquiring a solution?_
-- _Was there any part of the coding process (e.g., writing complicated functions) that should be documented?_
+Here an extract of the sequence of operations performed to create a model.
 
-### Refinement
-In this section, you will need to discuss the process of improvement you made upon the algorithms and techniques you used in your implementation. For example, adjusting parameters for certain models to acquire improved solutions would fall under the refinement category. Your initial and final solutions should be reported, as well as any significant intermediate results as necessary. Questions to ask yourself when writing this section:
-- _Has an initial solution been found and clearly reported?_
-- _Is the process of improvement clearly documented, such as what techniques were used?_
-- _Are intermediate and final solutions clearly reported as the process is improved?_
+```python
+data = get_daily_historical(symbol, start_date, end_date, min_length=dataset_len)
+data = clean_data(data)
+samples, targets = prepare_data(data, delays=prediction_horizons, lags=features_lags)
+
+X_train, X_test, Y_train, Y_test = train_test_split(samples, targets, test_size=test_len) #test_size=30, test_size=0.2
+
+print('Building model...')
+model = build_model()
+
+print('Training model...')
+model.fit(X_train, Y_train)
+
+print('Evaluating model...')
+evaluate_model(model, X_test, Y_test, X_train, Y_train, prediction_horizons)
+
+print('Saving model...\n    MODEL: {}'.format(model_filepath))
+save_model(model, model_filepath)
+```
+
+Each function is discussed in the following.
+
+
+
+#### Historical data
+
+The function to retrieve the historical is defined as follows:
+
+```python
+def get_daily_historical(symbol: str, start_date: datetime, end_date: datetime, min_length: int = None) -> object:
+    """ smart function to retrieve ohlcv data in the daily interval, with both adjusted and not adjusted closing price.
+      if a csv for the requested symbol already exists, read it and download only the data for the missing date ranges,
+      otherwise -first run- retrieve full date range and store to csv """
+
+    logger.info(f"Data request: {symbol} from {start_date} to {end_date}")
+
+    interval='1d'
+    interval_in_seconds = interval_to_seconds(interval)
+
+    csv_filename = create_filename(symbol, interval)
+
+    # check if exists
+    if os.path.isfile(csv_filename):
+        logger.info(f"Data already in {csv_filename}. Check for missing dates to fill...")
+
+        # if exists load csv and check interval. request data only for missing date range and store updated DataFrame
+        data = load_csv(csv_filename)
+
+        data_start_date = data.first_valid_index().to_pydatetime() - pd.Timedelta(seconds=interval_in_seconds)
+        if start_date < data_start_date:
+
+            logger.info(f"Partial range requested to provider: {start_date} to {data_start_date}")
+
+            # requested interval starts before the stored data interval.
+            previous_data = _get_historical(symbol, start_date, data_start_date, interval)
+            if previous_data.index.isin(data.index).all():
+                logger.info(f"Received dates already present.")
+
+            elif not previous_data.empty:
+                data = data.append(previous_data)
+                data.sort_index(inplace=True)
+                store_csv(csv_filename, data)
+                logger.info(f"Data received and csv updated")
+
+            else:
+                logger.info(f"No data received.")
+
+        data_end_date = data.last_valid_index().to_pydatetime() + pd.Timedelta(seconds=interval_in_seconds)
+        if end_date > data_end_date:
+
+            logger.info(f"Partial range requested to provider: {data_end_date} to {end_date}")
+
+            # requested interval ends after the stored data interval.
+            following_data = _get_historical(symbol, data_end_date, end_date, interval)
+            if following_data.index.isin(data.index).all():
+                logger.info(f"Received dates already present.")
+
+            elif not following_data.empty:
+                data = data.append(following_data)
+                data.sort_index(inplace=True)
+                store_csv(csv_filename, data)
+                logger.info(f"Data received and csv updated")
+
+            else:
+                logger.info(f"No data received.")
+
+    else:
+        # first download, request full range and store to csv
+        logger.info(f"Request full range to provider.")
+        data = _get_historical(symbol, start_date, end_date, interval)
+        store_csv(csv_filename, data)
+        logger.info(f"Data received and stored in {csv_filename}")
+
+    data = clean_data(data)
+
+    # if requested a min_length
+    if min_length:
+        if len(data) < min_length:
+            logger.warning("Data stored not enought to respect the requested minum lenght.")
+
+        else:
+            # slice data from end_Date back to a min_length
+            data = data[:end_date].iloc[-min_length:]
+
+    else:
+        data = data[start_date:end_date]
+
+    return data
+
+
+def _get_historical(symbol: str, start_date: datetime, end_date: datetime, interval: str):
+    """ returns ohlcv data in the specified interval, with both adjusted and not adjusted closing price.
+      """
+
+    # init symbol instance
+    symbol_instance = Ticker(symbol)
+
+    # request and returns tickers in interval
+    return symbol_instance.history(start=start_date, end=end_date, interval=interval, auto_adjust=False)
+```
+
+
+
+the function requires that a start and end dates are provided along with the asset symbol. Optionally a minimum length (*min_length*) of the output data can be provided to ensure the number of returned data row. In fact, the data are available only for the days in which the Stock Exchanges are operating, for example, a Monday to Monday data request will return 5 data row.
+
+At first the function create a unique filename base on the symbol name and checks for existing data (in CSV format). If no previous data are stored, the routine invokes the API to retrieve the data, store them into CSV, and returns the data. To be noted, that all duplicated rows are removed before storing the CSV. 
+
+On the other hand, if previous data exist, the routine load the data from the CSV and replace the API request start date with the latest date in the CSV data. Received the API response, the new data are concatenated with the previous data, and the CSV saved.
+
+
+
+#### Data Cleaning
+
+A cleaning procedure is performed only once the data are being used in the training, test, or prediction phase. The only abnormality in the data is the presence of two columns, Dividends and Stock Splits, composed of only 0 values. Therefore, these columns are removed in a dedicated clean function that detects columns with all equal values.
+
+```python
+def is_unique(s):
+    a = s.to_numpy() # s.values (pandas<0.24)
+    return (a[0] == a).all()
+
+
+def clean_data(data):
+    """ remove nans or constant values columns, or drop equals columns"""
+
+    for col_name in list(data.columns):
+        if is_unique(data[col_name]):
+            logger.info(f"Column {col_name} has unique values..removed.")
+            data.drop(columns=col_name, inplace=True)
+```
+
+
+
+#### Data preparation
+
+The cleaned data are provided at the preparation function, which will at first split the data columns to separate the target data (to be predicted) from the other data, namely features. The target is the Adjusted Prices of the stock symbol, whereas all the renaming columns are used as initial set of features, composed of: Open, High, Low, Close and Volume.
+
+```python
+def prepare_data(data, delays=None, lags=[]):
+    """ target is adjusted close"""
+
+    targets = data['Adj Close']
+    samples = data.drop(columns='Adj Close')
+
+    if lags:
+        df_diff_features = pd.DataFrame()
+        for lag in lags:
+            features_diff = samples.diff(periods=lag).add_suffix(f"_lag{lag}")
+            df_diff_features = features_diff if df_diff_features.empty else df_diff_features.join(features_diff)
+
+        samples = samples.join(df_diff_features)
+
+    samples = samples.dropna()  # drop rows with at least 1 nans
+    targets = targets[samples.index[0]:samples.index[-1]]
+
+    samples, targets = data_generator(samples, targets, delays=delays, batch_size=0)
+
+    return samples, targets
+
+```
+
+The inputs of the function allow to define in *delays* a list of desired prediction horizons. For each element the targets output will have a dedicated column. This operation is demanded to a dedicated method described below. Concerning the extra features, based on the discrete difference over a specific time lag between same column, the parameter *lags* allows to define a list of lags to be used to compute these features.
+
+
+
+Basically the data generator is taking care of properly compute the targets for each time lags (delay) requested, by keeping attention to maintain the produced data aligned. 
+
+
+```python
+def data_generator(data, labels=None, lookback=0, delays=[0], indexes=None, shuffle=False, batch_size=128, step=1, non_stop=False):
+    """ subsample data and create delayed data
+    inputs:
+        data: dataframe to use as samples and, conditionally, as targets
+        labels: if present use this as targets
+        lookback: points in the past to consider in each sample
+        delay: distance in the future of the target respect the sample
+        indexes: list of index to select must be discontinues, as results of kfold, thus create a index-of-indexes to iterate over
+                a continue range
+        shuffle:
+        batch_size:
+        step: take a valid samples every n step
+        non_stop: if True the data_generator continues to generate. If true, you need to set steps_per_epoch in fit params
+    # Doc:
+    data — The original array of floating-point data, which you normalized in listing
+    lookback — How many timesteps back the input data should go.
+    delay — How many timesteps in the future the target should be.
+    min_index and max_index — Indices in the data array that delimit which timesteps to draw from.
+            This is useful for keeping a segment of the data for validation and another for testing.
+    shuffle — Whether to shuffle the samples or draw them in chronological order.
+    batch_size — The number of samples per batch.
+    step — The period, in timesteps, at which you sample data. You’ll set it to 6 in order to draw one data point every hour
+
+"""
+
+if isinstance(delays, (int, float)):
+    delays = [delays]
+
+max_delay = max(delays)
+len_delay = len(delays)
+
+data = validate_input_data(data)
+labels = validate_input_data(labels)
+
+min_index = 0
+support_index = None  # use to get the actual index, allow to work with continues range
+if indexes is None:
+    # use all data directly
+    max_index = len(data) - max_delay - 1
+    support_index = np.asanyarray(range(min_index, len(data)))
+
+else:
+    # min and max index go from 0 to len(indexes), create support vector to max i -> indexes[i] -> data[indexes[i]]
+    max_index = len(indexes) - max_delay - 1
+    support_index = indexes
+
+i = min_index + lookback
+
+if batch_size == 0:
+    batch_size = max_index + 1
+
+if shuffle:
+    rows = np.random.randint(
+        min_index + lookback, max_index, size=batch_size)
+else:
+    if i + batch_size >= max_index:
+        i = min_index + lookback  # reset index
+
+    rows = np.arange(i, min(i + batch_size, max_index + 1))
+    i += len(rows)
+
+if lookback == 0:
+    samples = np.zeros((len(rows),
+                        data.shape[-1]))
+
+else:
+    samples = np.zeros((len(rows),
+                        lookback // step,
+                        data.shape[-1]))
+
+# targets = np.zeros((len(rows), len_delay))
+targets = np.zeros((len(rows), len_delay))
+
+for j, row in enumerate(rows):
+    if lookback == 0:
+        indices = [rows[j]]
+
+    else:
+        indices = range(rows[j] - lookback, rows[j], step)
+
+    samples[j] = data[support_index[indices]]
+
+    for i, _delay in enumerate(delays):
+        targets[j, i] = labels[support_index[rows[j] + _delay]]
+
+return samples, targets
+```
+
+
+
+#### Train and test split
+
+The split of the data generate in test and train is entrusted to the *train_test_split* function of sklearn. Specifically,  the function is invoke by defining on the the required test size as actual number of element and not as portion of the data, i.e, a test size of 300 elements instead of defining a test size of 30% of the whole data.
+
+```python
+X_train, X_test, Y_train, Y_test = train_test_split(samples, targets, test_size=test_len)
+```
+
+
+
+#### Modelling
+
+The functions dedicated to build, train and evaluate the model are:
+
+```python
+print('Building model...')
+model = build_model()
+
+print('Training model...')
+model.fit(X_train, Y_train)
+
+print('Evaluating model...')
+evaluate_model(model, X_test, Y_test, X_train, Y_train, prediction_horizons)
+
+print('Saving model...\n    MODEL: {}'.format(model_filepath))
+save_model(model, model_filepath)
+```
+
+##### Model building
+
+The model is based on the Pipeline concept provided by *sklearn*. The pipeline allows to define a sequence of transformations that define the model. The pipeline is also supported by the GridSearchCV. To be noted, that a MultiOutputRegressor has been adopted to perform and produce with a single pipeline a specific regression for each targets column, thus create for each of the a model.  
+
+```python
+def build_model():
+
+    # compose the processing pipeline
+    pipeline = Pipeline([
+        ('scaler', StandardScaler()),
+        # ('scaler', Normalizer()),
+        ('regres', MultiOutputRegressor(SVR(), n_jobs=num_cpus))
+        # ('regres', MultiOutputRegressor(LinearRegression(), n_jobs=num_cpus))
+        # ('regres', SVR())
+    ])
+
+    # # full params
+    # parameters = {
+    #     'regres__estimator__kernel': [10, 50, 100, 200],
+    #     'regres__estimator__min_samples_split': [2, 3, 4]
+    # }
+
+    # reduced params
+    # best_parameters = {
+    #     'cls__estimator__kernel': ['linear', 'rgf'],
+    #     'tfidf__use_idf': (True, False),
+    #     'vect__max_df': 0.5,
+    #     'vect__max_features': 10000,
+    #     'vect__ngram_range': (1, 2)}
+
+    srv_parameters = {
+        'regres__estimator__C': np.arange(0.2, 2, step=0.2),
+        # 'regres__estimator__C': np.arange(0.2, 2, step=0.5),
+        # 'regres__estimator__cache_size': 200,
+        # 'regres__estimator__coef0': 0.0,
+        # 'regres__estimator__degree': 3,
+        'regres__estimator__epsilon': np.arange(0.02, 0.2, step=0.02),
+        # 'regres__estimator__epsilon': np.arange(0.02, 0.2, step=0.1),
+        # 'regres__estimator__gamma': 'scale',
+        'regres__estimator__kernel': ['linear', 'rbf'],
+        # 'regres__estimator__max_iter': -1,
+        # 'regres__estimator__shrinking': True,
+        # 'regres__estimator__tol': 0.001
+    }
+
+    # instantiate search grid
+    cv = GridSearchCV(pipeline, param_grid=[srv_parameters, srv_parameters, srv_parameters, srv_parameters], verbose=2)
+    return cv
+    # return pipeline
+```
+
+##### Model fit
+
+The Pipeline produced allow to perform the model fit by simple invoking:  
+
+```python
+model.fit(X_train, Y_train)
+```
+
+
+
+###### Model evaluation
+
+Once the model/pipeline is fitted, the evaluation function is invoke to print the results achieved. The function implements the 3 metrics discussed above: MSE, MAE and MAPE.
+
+```python
+def evaluate_model(model, X_test, Y_test, X_train, Y_train, category_names):
+
+    # use model to predict output given the test data
+    Y_pred = model.predict(X_test)
+    Y_pred_train = model.predict(X_train)
+
+    # convert prediction and expected outputs into dataframes
+    y_pred_df = pd.DataFrame(Y_pred)
+    y_pred_df.columns = category_names
+    y_test_df = pd.DataFrame(Y_test)
+    y_test_df.columns = category_names
+    ##
+    y_pred_train_df = pd.DataFrame(Y_pred_train)
+    y_pred_train_df.columns = category_names
+    y_train_df = pd.DataFrame(Y_train)
+    y_train_df.columns = category_names
+
+    # get reports of the performance (accuracy, f1-score, precision, recall) for each category
+    # reports = dict()
+    print("Lags:\tMSE\t\t\t\t\tMAE\t\t\t\t\tMAPE")
+    for col in category_names:
+        mse = mean_squared_error(y_test_df[col], y_pred_df[col])
+        mae = mean_absolute_error(y_test_df[col], y_pred_df[col])
+        mape = mean_absolute_percentage_error(y_test_df[col], y_pred_df[col])
+        print(f"{col}\t\t{mse}\t{mae}\t{mape}")
+
+        # model performance
+        mse_train = mean_squared_error(y_train_df[col], y_pred_train_df[col])
+        mae_train = mean_absolute_error(y_train_df[col], y_pred_train_df[col])
+        mape_train = mean_absolute_percentage_error(y_train_df[col], y_pred_train_df[col])
+        print(f"({col}\t\t{mse_train}\t{mae_train}\t{mape_train})")
+
+    # print best params when search grid is performed
+    # model._final_estimator.estimators_[1].get_params()
+
+    if isinstance(model, GridSearchCV):
+        print("Best params:")
+        print(model.best_params_)
+```
+
+The function evaluates the model/s over the test data, but also with the train data, in order to provide an estimation of the robustness of the model.
+
+The MAPE is not available in the used library, thus it has been integrated as follows:
+
+```python
+def mean_absolute_percentage_error(y_true, y_pred):
+    ## Note: does not handle mix 1d representation
+    #if _is_1d(y_true):
+    #    y_true, y_pred = _check_1d_array(y_true, y_pred)
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+```
+
+##### Model save
+
+The trained model is then dumped on a dedicated file, i order to be used by the dashboard. 
+
+```python
+from joblib import dump
+
+def save_model(model, model_filepath):
+    dump(model, model_filepath)
+```
+
+
+
+#### Dashboard
+
+##### Data preparation
+
+The data displayed on the main page are loaded and prepared as follows:
+
+```python
+def index():
+
+    figures = list()
+
+    # start_date = datetime.datetime(2016, 1, 1)
+    # end_date = datetime.datetime(2020, 8, 31)
+    end_date = datetime.datetime.now()
+    start_date = end_date - datetime.timedelta(days=180)
+
+    prediction_horizons = [1, 7, 14, 28]
+    features_lags = [14, 28]
+
+    regression_result_1d = dict()
+    regression_result_7d = dict()
+    regression_result_14d = dict()
+    regression_result_28d = dict()
+
+    for symbol in DEFAULT_SYMBOLS.keys():
+
+        logger.info(f"Performing regression for symbol: {symbol}")
+        model = load_model(f"../models/production_models/models_{symbol}.dump")
+
+        # get OHLCV data
+        data = get_daily_historical(symbol, start_date, end_date)
+
+        data = clean_data(data)
+        regression_input, _ = prepare_data(data.copy(), diffs=features_lags)
+        regression_input = regression_input[-1, :].reshape(1, -1)
+
+        # compute predictions
+        regression_outputs = model.predict(regression_input)[-1]
+
+        current_price = data['Adj Close'].iloc[-1]
+        regression_pct_returns = 100 * (regression_outputs - current_price) / current_price
+        regression_pct_returns = np.round(regression_pct_returns, decimals=2)
+
+        regression_result_1d.update({symbol: regression_pct_returns[0]})
+        regression_result_7d.update({symbol: regression_pct_returns[1]})
+        regression_result_14d.update({symbol: regression_pct_returns[2]})
+        regression_result_28d.update({symbol: regression_pct_returns[3]})
+
+        # create dataframe with predicted data
+        predicted_data = pd.DataFrame(index=[data.index[-1]],
+                                      data=[[data.iloc[-1]['Adj Close']]*4],
+                                      columns=['Adj Close - 1d_prediction', 'Adj Close - 7d_prediction', 'Adj Close - 14d_prediction', 'Adj Close - 28d_prediction'])
+        # append 1day prediction
+        predicted_data = predicted_data.append(pd.DataFrame(index=[predicted_data.index[0] + pd.Timedelta(days=1)],
+                                                            data=[regression_outputs[0]],
+                                                            columns=['Adj Close - 1d_prediction']))
+        # append 7day prediction
+        predicted_data = predicted_data.append(pd.DataFrame(index=[predicted_data.index[0] + pd.Timedelta(days=7)],
+                                                            data=[regression_outputs[1]],
+                                                            columns=['Adj Close - 7d_prediction']))
+        # append 14day prediction
+        predicted_data = predicted_data.append(pd.DataFrame(index=[predicted_data.index[0] + pd.Timedelta(days=14)],
+                                                            data=[regression_outputs[2]],
+                                                            columns=['Adj Close - 14d_prediction']))
+        # append 28day prediction
+        predicted_data = predicted_data.append(pd.DataFrame(index=[predicted_data.index[0] + pd.Timedelta(days=28)],
+                                                            data=[regression_outputs[3]],
+                                                            columns=['Adj Close - 28d_prediction']))
+
+        # plot data
+        fig = plot_historical_with_predicted_data(symbol, data, predicted_data, return_fig=True)
+        figures.append(fig)
+
+    # encode plotly graphs in JSON
+    ids = ['figure-{}'.format(i) for i, _ in enumerate(figures)]
+    # Convert the plotly figures to JSON for javascript in html template
+    figuresJSON = json.dumps(figures, cls=plotly.utils.PlotlyJSONEncoder)
+
+    return render_template('index.html',
+                           ids=ids,
+                           figuresJSON=figuresJSON,
+                           regression_result_1d=regression_result_1d,
+                           regression_result_7d=regression_result_7d,
+                           regression_result_14d=regression_result_14d,
+                           regression_result_28d=regression_result_28d)
+```
+
+The data are retrieved and prepared as shown in the previous section. The stored model is loaded from the destination folder.
+
+In order to provide the prediction information, the latest (more recent) row of prepared data is use in the model prediction:
+
+```python
+    regression_input = regression_input[-1, :].reshape(1, -1)
+
+    # compute predictions
+    regression_outputs = model.predict(regression_input)[-1]
+```
+The regression_outputs is at first used to compute the predicted percentage returns, base on latest Adjusted Price, then these info are inserted in a dedicated dictionary for each prediction horizon (1, 7, 14, 28 days). Moreover, both data and regression_outputs are passed to the function  *plot_historical_with_predicted_data* to create the *plotly* JSON code of the figure. 
+
+```python
+def plot_historical_with_predicted_data(symbol_name: str, data: pd.DataFrame, predicted_data: pd.DataFrame,
+                                        open_file=False, return_fig=False):
+    """ plot historical data from data retriever """
+
+    traces = list()
+    plot_title = f"Stock: {symbol_name}"
+    plot_filename = f"stock_{symbol_name}.html"
+
+    for col in data.columns:
+
+        traces.append(go.Scatter(
+            x=data[col].index,
+            y=data[col].values,
+            name=col,
+            showlegend=True)
+        )
+
+    for col in predicted_data.columns:
+
+        traces.append(go.Scatter(
+            x=predicted_data[col].dropna().index,
+            y=predicted_data[col].dropna().values,
+            name=col,
+            line=dict(color='red', dash='dot'),
+            showlegend=True)
+        )
+
+    fig = go.Figure(traces)
+
+    fig.update_layout(
+        title_text=plot_title,
+        xaxis_title="Date",
+        yaxis_title="Price ($)")
+        # legend_title="Legend Title")
+
+    fig.update_xaxes(
+        rangeslider_visible=True,
+        rangeselector=dict(
+            buttons=list([
+                dict(count=1, label="1m", step="month", stepmode="backward"),
+                dict(count=6, label="6m", step="month", stepmode="backward"),
+                dict(count=1, label="YTD", step="year", stepmode="todate"),
+                dict(count=1, label="1y", step="year", stepmode="backward"),
+                dict(step="all")
+            ])
+        )
+    )
+
+    if return_fig:
+        return fig
+
+    poff(fig, filename=plot_filename, auto_open=open_file)
+```
+
+The predicted_data is passed separately  in order to be added in the plot with a dedicated label (denoting the prediction horizon), color (red), and line style (dotted).
+
+
+
+###### Dispaly data and figures
+
+In the html the plotly figure, converted into JSON, are addressed as follows:
+
+```html
+<script type="text/javascript">
+    // plots the figure with id
+    // id much match the div id above in the html
+    var figures = {{figuresJSON | safe}};
+    var ids = {{ids | safe}};
+    for(var i in figures) {
+        Plotly.plot(ids[i],
+            figures[i].data,
+            figures[i].layout || {});
+    }
+</script>
+```
+
+
+
+Each table, for a specific prediction horizon, is created as reported below. A different color is assigned to a symbol cell, based on the expected returns: green if return > 5%, yellow if return lower than -5%, and red if return equal or lower than -10%. 
+
+```html
+<div class="col">
+<h4 id="tag-line" class="text-muted">1 Day Predicted Returns</h4>
+
+    <ul class="list-group">
+    {% for stock, regression in regression_result_1d.items() %}
+        {% if regression >= 5 %}
+            <li class="list-group-item list-group-item-success text-center">{{stock}} ({{regression}}%)</li>
+        {% elif regression < -5 %}
+            <li class="list-group-item list-group-item-warning text-center">{{stock}} ({{regression}}%)</li>
+        {% elif regression <= -10 %}
+            <li class="list-group-item list-group-item-danger text-center">{{stock}} ({{regression}}%)</li>
+        {% else %}
+            <li class="list-group-item list-group-item-light text-center">{{stock}} ({{regression}}%)</li>
+        {% endif %}
+    {% endfor %}
+    </ul>
+</div>
+```
+
+
 
 
 ## IV. Results
@@ -322,7 +918,7 @@ Different normalization techniques can be compared only over MAPE metric.
 | 28    | 101.141 | 7.954 | 44.961 |
 
 
-As shown in the tables above, for both models can be selected as normalization technique the  Mean and Variance Normalization. Therefore, from now on the reported resutls have been achieved always by applying the selected normalizatioon.
+As shown in the tables above, for both models can be selected as normalization technique the  Mean and Variance Normalization. Therefore, from now on the reported results have been achieved always by applying the selected normalization.
 
 
 #### Data ranges and Features Selection
