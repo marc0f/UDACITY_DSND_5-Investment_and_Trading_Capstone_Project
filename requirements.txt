@@ -38,7 +38,7 @@ nltk==3.5
 notebook==6.0.3
 numpy==1.18.1
 packaging==20.4
-pandas==1.0.1
+pandas==1.2.2
 pandocfilters==1.4.2
 parso==0.6.1
 pexpect==4.8.0

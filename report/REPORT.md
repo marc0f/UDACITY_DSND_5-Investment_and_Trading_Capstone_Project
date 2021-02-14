@@ -132,6 +132,62 @@ $$
 \hat{x} = \frac{x- \mu}{\sigma}
 $$
 
+#### Features
+
+##### Raw
+
+The basic group of features is composed by the available raw data, thus:  Open, High, Low, Close, Adj Close, Volume, and Dividends.
+
+##### Difference
+
+A first set of features is made by using the simple difference between the adjusted price at time $t$ and the value at $t-i$. Features have been computed for $i$ equals to 1, 7, 14, and 28 days. A sample of the generated features are reported in the following image.
+
+![NRG feature_diff](imgs/visual_NRG_feature_diff.png) 
+
+
+
+##### SMA
+
+A simple moving average (SMA) is an arithmetic moving average calculated over a specific number of time periods of the target price (adjusted close price). Short-term  averages respond quickly to changes in the price of the underlying  security, while long-term averages are slower to react.
+
+Common moving average lengths are 10, 20, 50, 100 and 200 days ([How to Use a Moving Average to Buy Stocks](https://www.investopedia.com/articles/active-trading/052014/how-use-moving-average-buy-stocks.asp)). Generally, the 20-day may be of analytical benefit to a shorter-term trader since  it follows the price more closely and therefore produces less "lag" than the longer-term moving average. A 100-day MA may be more beneficial to a longer-term trader.
+
+Therefore, the 20-day and 100-day SMAs have been considered as features. A sample of the generated features are reported in the following image.
+
+![NRG feature_sma](imgs/visual_NRG_feature_sma.png)
+
+
+
+##### EMA
+
+An exponential moving average (EMA) is a type of moving average that places a greater weight and significance on the most recent data  points. An exponentially weighted moving average reacts more  significantly to recent price changes than a simple moving average, which applies an equal weight to all observations in the period.
+
+A weighted moving average is computed as:
+$$
+y_t = \frac{\sum^{t}_{i=0} w_i x_{t-i}}{\sum^{t}_{i=0} w_i}
+$$
+where $x_t$ is the input, $y_t$ is the result and $w_i$ are the weights. The weights are computed as $w_i = (1 - \alpha)^i$, where $\alpha in [0, 1]$ and its value can be defined using the "span", such as $\alpha = 2 / (span + 1)$, the "center of mass", as $\alpha = 1 / 1(1 + c)$ or the "half-life", with $\alpha = 1 - \exp(\log(0.5) / h)$. The "span" corresponds to what is commonly called an “N-day EW moving average”, an used in the code.
+
+Traders often use several different EMA lengths, such as 10-day, 50-day, and 200-day moving averages ([EMA](https://www.investopedia.com/terms/e/ema.asp)). To limit the length of the required data, and given that the max horizon for the prediction is 28 days, the 10-day and 50-day EMAs have been computed. A sample of the generated features are reported in the following image.
+
+![NRG feature_ema](imgs/visual_NRG_feature_ema.png)
+
+
+
+##### VWAP
+
+The volume weighted average price (VWAP) is a trading benchmark used by traders that gives the average price a security has traded at throughout the day, based on both volume and price. It is important because it provides traders with insight into both the trend and value of a security. Basically the VWAP is computed as:
+$$
+VWAP = \frac{\sum^{t}_{i=0} v_i p_i}{\sum^{t}_{i=0} v_i}
+$$
+where $v_i$ is the volume, and $p_i$ is the price in the same time period. 
+
+A common time-period values are not defined for this indicator ([VWAP](https://www.investopedia.com/terms/v/vwap.asp)), therefore the same periods of the SMA have been adopted as features: 20-day and 100-day. A sample of the generated features are reported in the following image.
+
+![NRG feature_vwap](imgs/visual_NRG_feature_vwap.png)
+
+
+
 #### Regression
 
 ##### Linear Regression
@@ -1444,26 +1500,33 @@ In this section, you will need to provide some form of visualization that emphas
 - _If a plot is provided, are the axes, title, and datum clearly defined?_
 
 ### Reflection
+
+
+- interesting: model creating base on pipeline and dashboard.
+- difficulties: model optimization  
+
+
+
 In this section, you will summarize the entire end-to-end problem solution and discuss one or two particular aspects of the project you found interesting or difficult. You are expected to reflect on the project as a whole to show that you have a firm understanding of the entire process employed in your work. Questions to ask yourself when writing this section:
+
 - _Have you thoroughly summarized the entire process you used for this project?_
 - _Were there any interesting aspects of the project?_
 - _Were there any difficult aspects of the project?_
 - _Does the final model and solution fit your expectations for the problem, and should it be used in a general setting to solve these types of problems?_
 
 ### Improvement
+
+
+- wider set of features such as : SMA at different interval. SMA is widely used in stocks to get an estimate of the trend
+  - implement other indexes such as: Bolinger Band, Strength Index, ...
+- to integrate such jus integrate them in the  prepare_data function, of course the required lookback window of data to compute the feature/d must be considered to extend the query date range
+- explore regression approach base on  neural network: starting from simple architecture such as MLP, ECHo state network and then more complex like Recurrent NN.  
+
+
+
 In this section, you will need to provide discussion as to how one aspect of the implementation you designed could be improved. As an example, consider ways your implementation can be made more general, and what would need to be modified. You do not need to make this improvement, but the potential solutions resulting from these changes are considered and compared/contrasted to your current solution. Questions to ask yourself when writing this section:
+
 - _Are there further improvements that could be made on the algorithms or techniques you used in this project?_
 - _Were there algorithms or techniques you researched that you did not know how to implement, but would consider using if you knew how?_
 - _If you used your final solution as the new benchmark, do you think an even better solution exists?_
 
------------
-
-**Before submitting, ask yourself. . .**
-
-- Does the project report you’ve written follow a well-organized structure similar to that of the project template?
-- Is each section (particularly **Analysis** and **Methodology**) written in a clear, concise and specific fashion? Are there any ambiguous terms or phrases that need clarification?
-- Would the intended audience of your project be able to understand your analysis, methods, and results?
-- Have you properly proof-read your project report to assure there are minimal grammatical and spelling mistakes?
-- Are all the resources used for this project correctly cited and referenced?
-- Is the code that implements your solution easily readable and properly commented?
-- Does the code execute without error and produce results similar to those reported?

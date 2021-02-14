@@ -18,6 +18,7 @@ import logging
 from data_retriever.retriever import get_daily_historical
 from utils.plot_factory import plot_historical
 from utils.defaults import DEFAULT_SYMBOLS
+from utils.features import sma, ema, vwap
 
 
 logging.basicConfig(level=logging.INFO)
@@ -154,15 +155,19 @@ def prepare_data(data, delays=None, lags=[]):
     """ target is adjusted close"""
 
     targets = data['Adj Close']
-    samples = data.drop(columns='Adj Close')
+    # samples = data.drop(columns='Adj Close')
+    samples = data
 
-    if lags:
-        df_diff_features = pd.DataFrame()
-        for lag in lags:
-            features_diff = samples.diff(periods=lag).add_suffix(f"_lag{lag}")
-            df_diff_features = features_diff if df_diff_features.empty else df_diff_features.join(features_diff)
+    # compute features
+    samples['sma_20'] = sma(targets, periods=20)
+    samples['sma_100'] = sma(targets, periods=100)
+    samples['ema_10'] = ema(targets, periods=10)
+    samples['ema_50'] = ema(targets, periods=50)
+    samples['vwap_20'] = vwap(price_data=targets, volume_data=samples['Volume'], periods=20)
+    samples['vwap_100'] = vwap(price_data=targets, volume_data=samples['Volume'], periods=100)
 
-        samples = samples.join(df_diff_features)
+    for lag in lags:
+        samples[f"diff_{lag}"] = targets.diff(periods=lag)
 
     samples = samples.dropna()  # drop rows with at least 1 nans
     targets = targets[samples.index[0]:samples.index[-1]]
@@ -267,15 +272,18 @@ if __name__ == '__main__':
     model_filepath = 'test.dump'
     prediction_horizons = [1, 7, 14, 28]  # steps of prediction in base resolution, i.e. days
     features_lags = prediction_horizons
-    features_lags = []
+    # features_lags = []
+
+    # sma 100
+    features_extra_data_periods = 100
+
     test_len = 90  # days
     train_len_months = 24  # months
 
     symbol = list(DEFAULT_SYMBOLS.keys())[0]
 
     dataset_len = test_len + train_len_months * 30 + max(prediction_horizons) # days
-    if features_lags:
-        dataset_len += max(features_lags)
+    dataset_len += features_extra_data_periods
 
     end_date = datetime.datetime.now() - datetime.timedelta(days=1)
     start_date = end_date - datetime.timedelta(days=dataset_len)
