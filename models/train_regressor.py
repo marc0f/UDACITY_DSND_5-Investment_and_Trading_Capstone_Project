@@ -17,6 +17,7 @@ import logging
 from data_retriever.retriever import get_daily_historical
 from utils.plot_factory import plot_historical
 from utils.defaults import DEFAULT_SYMBOLS
+from utils.features import sma, ema, vwap
 
 
 logging.basicConfig(level=logging.INFO)
@@ -192,14 +193,23 @@ def compute_differential_data(data, diffs=[]):
     return data
 
 
-def prepare_data(data, delays=[0], diffs=[]):
+def prepare_data(data, delays=None):
     """ target is adjusted close"""
 
     targets = data['Adj Close']
-    samples = data.drop(columns='Adj Close')  # remove dividends
+    # samples = data.drop(columns='Adj Close')
+    samples = data
 
-    if diffs:
-        samples = compute_differential_data(samples, diffs=diffs)
+    # compute features
+    samples['sma_20'] = sma(targets, periods=20)
+    samples['sma_100'] = sma(targets, periods=100)
+    samples['ema_10'] = ema(targets, periods=10)
+    samples['ema_50'] = ema(targets, periods=50)
+    samples['vwap_20'] = vwap(price_data=targets, volume_data=samples['Volume'], periods=20)
+    samples['vwap_100'] = vwap(price_data=targets, volume_data=samples['Volume'], periods=100)
+
+    for lag in [1, 7, 14, 28]:
+        samples[f"diff_{lag}"] = targets.diff(periods=lag)
 
     samples = samples.dropna()  # drop rows with at least 1 nans
     targets = targets[samples.index[0]:samples.index[-1]]
@@ -305,13 +315,14 @@ def load_model(model_filepath):
 if __name__ == '__main__':
 
     prediction_horizons = [1, 7, 14, 28]  # steps of prediction in base resolution, i.e. days
-    features_lags = [14, 28]
-    test_len = 90  # days
-    train_len_months = 12  # months
+    test_len_days = 90  # days
+    train_len_days = 2 * 265  # months
 
-    dataset_len = test_len + train_len_months * 30 + max(prediction_horizons)  # days
-    if features_lags:
-        dataset_len += max(features_lags)
+    # sma 100
+    features_extra_data_periods = 100
+
+    dataset_len = test_len_days + train_len_days + max(prediction_horizons) # days
+    dataset_len += features_extra_data_periods
 
     end_date = datetime.datetime.now() - datetime.timedelta(days=1)
     start_date = end_date - datetime.timedelta(days=dataset_len)
@@ -325,9 +336,9 @@ if __name__ == '__main__':
             # get OHLCV data
             data = get_daily_historical(symbol, start_date, end_date, min_length=dataset_len)
             data = clean_data(data)
-            samples, targets = prepare_data(data, delays=prediction_horizons, diffs=features_lags)
+            samples, targets = prepare_data(data, delays=prediction_horizons)
 
-            X_train, X_test, Y_train, Y_test = train_test_split(samples, targets, test_size=test_len) #test_size=30, test_size=0.2
+            X_train, X_test, Y_train, Y_test = train_test_split(samples, targets, test_size=test_len_days) #test_size=30, test_size=0.2
 
             print('Building model...')
             model = build_model()

@@ -151,7 +151,7 @@ def data_generator(data, labels=None, lookback=0, delays=[0], indexes=None, shuf
     return samples, targets
 
 
-def prepare_data(data, delays=None, lags=[]):
+def prepare_data(data, delays=None):
     """ target is adjusted close"""
 
     targets = data['Adj Close']
@@ -166,7 +166,7 @@ def prepare_data(data, delays=None, lags=[]):
     samples['vwap_20'] = vwap(price_data=targets, volume_data=samples['Volume'], periods=20)
     samples['vwap_100'] = vwap(price_data=targets, volume_data=samples['Volume'], periods=100)
 
-    for lag in lags:
+    for lag in [1, 7, 14, 28]:
         samples[f"diff_{lag}"] = targets.diff(periods=lag)
 
     samples = samples.dropna()  # drop rows with at least 1 nans
@@ -271,18 +271,16 @@ if __name__ == '__main__':
 
     model_filepath = 'test.dump'
     prediction_horizons = [1, 7, 14, 28]  # steps of prediction in base resolution, i.e. days
-    features_lags = prediction_horizons
-    # features_lags = []
 
     # sma 100
     features_extra_data_periods = 100
 
-    test_len = 90  # days
-    train_len_months = 24  # months
+    test_len_days = 90  # days
+    train_len_days = 2 * 365  # months
 
     symbol = list(DEFAULT_SYMBOLS.keys())[0]
 
-    dataset_len = test_len + train_len_months * 30 + max(prediction_horizons) # days
+    dataset_len = test_len_days + train_len_days + max(prediction_horizons) # days
     dataset_len += features_extra_data_periods
 
     end_date = datetime.datetime.now() - datetime.timedelta(days=1)
@@ -293,9 +291,9 @@ if __name__ == '__main__':
     # get OHLCV data
     data = get_daily_historical(symbol, start_date, end_date, min_length=dataset_len)
     data = clean_data(data)
-    samples, targets = prepare_data(data, delays=prediction_horizons, lags=features_lags)
+    samples, targets = prepare_data(data, delays=prediction_horizons)
 
-    X_train, X_test, Y_train, Y_test = train_test_split(samples, targets, test_size=test_len) #test_size=30, test_size=0.2
+    X_train, X_test, Y_train, Y_test = train_test_split(samples, targets, test_size=test_len_days) #test_size=30, test_size=0.2
 
     print('Building model...')
     model = build_model()
