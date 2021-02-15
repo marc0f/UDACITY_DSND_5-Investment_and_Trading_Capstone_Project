@@ -418,22 +418,27 @@ def clean_data(data):
 
 #### Data preparation
 
-The cleaned data are provided at the preparation function, which will at first split the data columns to separate the target data (to be predicted) from the other data, namely features. The target is the Adjusted Prices of the stock symbol, whereas all the renaming columns are used as initial set of features, composed of: Open, High, Low, Close and Volume.
+The cleaned data are provided at the preparation function, which will at first split the data columns to separate the data in targets (data to be predicted) and samples, or features. The targets are a copy of the Adjusted Prices of the stock symbol, that in the *data_generator* will be properly shifted to create the targets at different time lags. The original  columns are used as initial set of *raw* features, composed of: Open, High, Low, Close and Volume. From them the SMA, EMA and VWAP features are computed.
 
 ```python
-def prepare_data(data, delays=None, lags=[]):
+def prepare_data(data, delays=None):
     """ target is adjusted close"""
 
     targets = data['Adj Close']
-    samples = data.drop(columns='Adj Close')
+    # samples = data.drop(columns='Adj Close')
+    samples = data
 
-    if lags:
-        df_diff_features = pd.DataFrame()
-        for lag in lags:
-            features_diff = samples.diff(periods=lag).add_suffix(f"_lag{lag}")
-            df_diff_features = features_diff if df_diff_features.empty else df_diff_features.join(features_diff)
-
-        samples = samples.join(df_diff_features)
+    # compute features
+    samples[f"diff_1"] = diff(targets, periods=1)
+    samples[f"diff_7"] = diff(targets, periods=7)
+    samples[f"diff_14"] = diff(targets, periods=14)
+    samples[f"diff_28"] = diff(targets, periods=28)
+    samples['sma_20'] = sma(targets, periods=20)
+    samples['sma_100'] = sma(targets, periods=100)
+    samples['ema_10'] = ema(targets, periods=10)
+    samples['ema_50'] = ema(targets, periods=50)
+    samples['vwap_20'] = vwap(price_data=targets, volume_data=samples['Volume'], periods=20)
+    samples['vwap_100'] = vwap(price_data=targets, volume_data=samples['Volume'], periods=100)
 
     samples = samples.dropna()  # drop rows with at least 1 nans
     targets = targets[samples.index[0]:samples.index[-1]]
@@ -444,7 +449,28 @@ def prepare_data(data, delays=None, lags=[]):
 
 ```
 
-The inputs of the function allow to define in *delays* a list of desired prediction horizons. For each element the targets output will have a dedicated column. This operation is demanded to a dedicated method described below. Concerning the extra features, based on the discrete difference over a specific time lag between same column, the parameter *lags* allows to define a list of lags to be used to compute these features.
+
+
+The inputs of the function allow to define in *delays* a list of desired prediction horizons. For each element the targets output will have a dedicated column. This operation is demanded to a dedicated function to generate the data. Concerning the other features, they are created using the specific functions:
+
+```python
+def diff(data, periods=1):
+    return data.diff(periods=1)
+
+
+def sma(data, periods=10):
+    return data.rolling(window=periods, min_periods=periods).mean()
+
+
+def ema(data, periods=10):
+    return data.ewm(span=periods, min_periods=periods, adjust=True).mean()
+
+
+def vwap(price_data, volume_data, periods=10):
+    volume_ma = volume_data.rolling(window=periods, min_periods=periods).mean()
+    price_volume_ma = (price_data * volume_data).rolling(window=periods, min_periods=periods).mean()
+    return price_volume_ma / volume_ma
+```
 
 
 
@@ -977,277 +1003,308 @@ Different normalization techniques can be compared only over MAPE metric.
 As shown in the tables above, for both models can be selected as normalization technique the  Mean and Variance Normalization. Therefore, from now on the reported results have been achieved always by applying the selected normalization.
 
 
+
 #### Data ranges and Features Selection
 
-##### 1 year of train data
+##### Linear Regression: 6 month of train data
 
-###### Linear Regression
-
-###### No extra features
+###### Raw features
 
 | Lags | MSE   | MAE   | MAPE  |
 | :--- | ----- | ----- | ----- |
-| 1     | 0.404  | 0.492 | 1.447 |
-| 7     | 2.883  | 1.277 | 3.776 |
-| 14    | 4.769  | 1.763 | 4.969 |
-| 28    | 13.004 | 2.723 | 8.073 |
+| 1    | 0.470 | 0.454 | 1.375 |
+| 7    | 2.464 | 1.159 | 3.493 |
+| 14   | 6.910 | 1.824 | 5.783 |
+| 28   | 9.747 | 2.288 | 6.680 |
 
-###### Features lags 1
+###### Raw + Difference features
 
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.434  | 0.518 | 1.519 |
-| 7     | 2.902  | 1.264 | 3.736 |
-| 14    | 4.738  | 1.801 | 5.085 |
-| 28    | 13.161 | 2.758 | 8.197 |
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 0.591  | 0.574 | 1.686 |
+| 7    | 2.970  | 1.356 | 4.032 |
+| 14   | 8.608  | 2.023 | 6.433 |
+| 28   | 11.227 | 2.482 | 7.197 |
 
-###### Features lags 7
+###### Raw + Difference + SMA features
 
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.379  | 0.476 | 1.401 |
-| 7     | 3.005  | 1.318 | 3.897 |
-| 14    | 5.460  | 1.879 | 5.317 |
-| 28    | 13.448 | 2.767 | 8.182 |
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 0.782  | 0.635 | 2.036 |
+| 7    | 3.733  | 1.456 | 4.442 |
+| 14   | 6.561  | 2.024 | 6.167 |
+| 28   | 10.995 | 2.533 | 7.434 |
 
+###### Raw + Difference + SMA + EMA features
 
-###### Features lags 14
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 0.786  | 0.643 | 2.057 |
+| 7    | 3.964  | 1.493 | 4.540 |
+| 14   | 6.769  | 2.045 | 6.232 |
+| 28   | 11.413 | 2.619 | 7.701 |
 
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.387  | 0.485 | 1.427 |
-| 7     | 0.387  | 0.485 | 1.427 |
-| 14    | 4.881  | 1.777 | 4.998 |
-| 28    | 12.897 | 2.703 | 8.022 |
+###### Raw + Difference + SMA + EMA + VWAP features
 
-###### Features lags 28
-
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.400  | 0.486 | 1.432 |
-| 7     | 2.922  | 1.302 | 3.854 |
-| 14    | 4.812  | 1.758 | 4.955 |
-| 28    | 12.713 | 2.767 | 8.183 |
-
-
-###### Features lags 14 and 28
-
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.406 | 0.493 | 1.451 |
-| 7     | 2.710 | 1.271 | 3.742 |
-| 14    | 5.053 | 1.784 | 5.018 |
-| 28    | 12.560 | 2.698 | 7.969 |
-
-###### Features lags 1, 7, 14, 28
-
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.434  | 0.528 | 1.548 |
-| 7     | 2.824  | 1.319 | 3.874 |
-| 14    | 5.583  | 1.908 | 5.369 |
-| 28    | 12.770 | 2.731 | 8.058 |
-
-###### SVR
-
-###### No extra features
-
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.530  | 0.547 | 1.598 |
-| 7     | 3.259  | 1.291 | 3.831 |
-| 14    | 4.912  | 1.601 | 4.559 |
-| 28    | 13.913 | 2.615 | 7.754 |
-
-###### Features lags 1
-
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.923  | 0.663 | 1.901 |
-| 7     | 3.910  | 1.438 | 4.197 |
-| 14    | 5.617  | 1.804 | 5.097 |
-| 28    | 13.975 | 2.683 | 7.958 |
-
-###### Features lags 7
-
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.603  | 0.552 | 1.605 |
-| 7     | 2.972  | 1.265 | 3.720 |
-| 14    | 4.825  | 1.609 | 4.595 |
-| 28    | 13.471 | 2.662 | 7.899 |
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 0.705  | 0.611 | 1.947 |
+| 7    | 3.909  | 1.516 | 4.660 |
+| 14   | 6.294  | 1.969 | 6.072 |
+| 28   | 10.245 | 2.497 | 7.303 |
 
 
-###### Features lags 14
 
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.530  | 0.550 | 1.606 |
-| 7     | 2.349  | 1.188 | 3.455 |
-| 14    | 4.835  | 1.651 | 4.691 |
-| 28    | 13.340 | 2.555 | 7.587 |
+##### SVR: 6 month of train data
 
-###### Features lags 28
+###### Raw features
 
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.521  | 0.557 | 1.629 |
-| 7     | 3.030  | 1.251 | 3.715 |
-| 14    | 4.983  | 1.621 | 4.596 |
-| 28    | 12.789 | 2.442 | 7.251 |
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 0.757  | 0.568 | 1.723 |
+| 7    | 2.857  | 1.132 | 3.475 |
+| 14   | 8.633  | 1.863 | 6.048 |
+| 28   | 10.815 | 2.266 | 6.697 |
 
-###### Features lags 14 and 28
+###### Raw + Difference features
 
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.635  | 0.611 | **1.789** |
-| 7     | 2.459  | 1.199 | **3.516** |
-| 14    | 4.791  | 1.618 | **4.588** |
-| 28    | 12.714 | 2.455 | **7.321** |
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 0.874  | 0.695 | 2.060 |
+| 7    | 3.589  | 1.354 | 4.101 |
+| 14   | 9.171  | 1.978 | 6.405 |
+| 28   | 11.253 | 2.393 | 7.047 |
 
-###### Features lags 1, 7, 14, 28
+###### Raw + Difference + SMA features
 
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.965  | 0.700 | 2.029 |
-| 7     | 3.146  | 1.303 | 3.813 |
-| 14    | 5.221  | 1.690 | 4.780 |
-| 28    | 12.755 | 2.536 | 7.595 |
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 3.396  | 1.044 | 3.547 |
+| 7    | 4.874  | 1.555 | 4.798 |
+| 14   | 7.018  | 1.855 | 5.755 |
+| 28   | 11.464 | 2.287 | 6.813 |
+
+###### Raw + Difference + SMA + EMA features
+
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 3.330  | 1.026 | 3.488 |
+| 7    | 4.781  | 1.545 | 4.759 |
+| 14   | 6.857  | 1.806 | 5.608 |
+| 28   | 11.146 | 2.244 | 6.688 |
+
+###### Raw + Difference + SMA + EMA + VWAP features
+
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 3.259  | 1.013 | 3.443 |
+| 7    | 4.639  | 1.506 | 4.631 |
+| 14   | 6.542  | 1.728 | 5.350 |
+| 28   | 11.001 | 2.195 | 6.535 |
 
 
-##### 2  years of train data
 
-###### Linear Regression
+##### Linear Regression: 1 year of train data
 
-###### No extra features
+###### Raw features
 
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.607  | 0.508 | 1.543 |
-| 7     | 4.128  | 1.407 | 4.487 |
-| 14    | 9.052  | 2.164 | 6.947 |
-| 28    | 12.561 | 2.620 | 8.155 |
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 0.339  | 0.457 | 1.370 |
+| 7    | 3.390  | 1.484 | 4.286 |
+| 14   | 6.573  | 1.896 | 5.547 |
+| 28   | 13.222 | 2.738 | 7.805 |
 
-###### Features lags 1
+###### Raw + Difference features
 
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.626  | 0.513 | 1.549 |
-| 7     | 4.042  | 1.373 | 4.344 |
-| 14    | 8.846  | 2.111 | 6.766 |
-| 28    | 12.717 | 2.656 | 8.219 |
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 0.391  | 0.473 | 1.398 |
+| 7    | 4.128  | 1.341 | 4.073 |
+| 14   | 5.595  | 1.805 | 5.290 |
+| 28   | 11.428 | 2.607 | 7.410 |
 
-###### Features lags 7
+###### Raw + Difference + SMA features
 
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.602  | 0.500 | 1.513 |
-| 7     | 3.971  | 1.370 | 4.345 |
-| 14    | 8.611  | 2.109 | 6.734 |
-| 28    | 12.193 | 2.625 | 8.153 |
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 0.404  | 0.457 | 1.349 |
+| 7    | 3.425  | 1.388 | 4.209 |
+| 14   | 5.938  | 1.845 | 5.231 |
+| 28   | 11.376 | 2.228 | 6.210 |
 
-###### Features lags 14
+###### Raw + Difference + SMA + EMA features
 
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.615  | 0.511 | 1.552 |
-| 7     | 4.061  | 1.426 | 4.520 |
-| 14    | 9.456  | 2.173 | 6.962 |
-| 28    | 12.252 | 2.559 | 7.978 |
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 0.402  | 0.456 | 1.347 |
+| 7    | 3.435  | 1.400 | 4.229 |
+| 14   | 5.866  | 1.810 | 5.088 |
+| 28   | 11.343 | 2.243 | 6.255 |
 
-###### Features lags 28
+###### Raw + Difference + SMA + EMA + VWAP features
 
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.665  | 0.522 | 1.578 |
-| 7     | 3.939  | 1.331 | 4.261 |
-| 14    | 8.626  | 2.072 | 6.666 |
-| 28    | 12.276 | 2.612 | 8.132 |
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 0.397  | 0.445 | 1.315 |
+| 7    | 3.180  | 1.443 | 4.319 |
+| 14   | 6.044  | 1.844 | 5.193 |
+| 28   | 10.022 | 2.254 | 6.322 |
 
-###### Features lags 14 and 28
 
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.675  | 0.525 | 1.587 |
-| 7     | 3.938  | 1.370 | 4.360 |
-| 14    | 9.272  | 2.151 | 6.897 |
-| 28    | 12.278 | 2.566 | 8.007 |
 
-###### Features lags 1, 7, 14, 28
+##### SVR: 1 year of train data
 
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.675  | 0.525 | 1.587 |
-| 7     | 3.938  | 1.370 | 4.360 |
-| 14    | 9.272  | 2.151 | 6.897 |
-| 28    | 12.278 | 2.566 | 8.007 |
+###### Raw features
 
-###### SVR
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 1.053  | 0.563 | 1.786 |
+| 7    | 2.845  | 1.314 | 3.813 |
+| 14   | 6.664  | 1.791 | 5.374 |
+| 28   | 13.464 | 2.511 | 7.233 |
 
-###### No extra features
+###### Raw + Difference features
+
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 0.981  | 0.571 | 1.739 |
+| 7    | 3.343  | 1.224 | 3.677 |
+| 14   | 5.906  | 1.701 | 5.059 |
+| 28   | 10.966 | 2.381 | 6.863 |
+
+###### Raw + Difference + SMA features
+
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 0.471  | 0.487 | 1.425 |
+| 7    | 4.149  | 1.440 | 4.436 |
+| 14   | 6.071  | 1.912 | 5.522 |
+| 28   | 11.167 | 2.325 | 6.660 |
+
+###### Raw + Difference + SMA + EMA features
+
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 0.468  | 0.487 | 1.429 |
+| 7    | 4.131  | 1.432 | 4.417 |
+| 14   | 6.038  | 1.903 | 5.490 |
+| 28   | 11.163 | 2.318 | 6.636 |
+
+###### Raw + Difference + SMA + EMA + VWAP features
+
+| Lags | MSE    | MAE   | MAPE  |
+| :--- | ------ | ----- | ----- |
+| 1    | 0.467  | 0.492 | 1.441 |
+| 7    | 4.083  | 1.425 | 4.392 |
+| 14   | 5.874  | 1.871 | 5.395 |
+| 28   | 10.829 | 2.281 | 6.520 |
+
+
+
+##### Linear Regression: 2 years of train data
+
+###### Raw features
 
 | Lags | MSE   | MAE   | MAPE  |
 | :--- | ----- | ----- | ----- |
-| 1     | 0.776  | 0.619 | 1.864 |
-| 7     | 4.569  | 1.492 | 4.748 |
-| 14    | 9.040  | 2.120 | 6.825 |
-| 28    | 12.276 | 2.473 | 7.780 |
+| 1    | 0.515 | 0.454 | 1.485 |
+| 7    | 3.430 | 1.289 | 4.402 |
+| 14   | 5.043 | 1.595 | 5.375 |
+| 28   | 7.486 | 2.151 | 7.003 |
 
-###### Features lags 1
-
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 1.632  | 0.795 | 2.354 |
-| 7     | 5.858  | 1.655 | 5.187 |
-| 14    | 9.040  | 2.164 | 6.966 |
-| 28    | 12.579 | 2.589 | 8.030 |
-
-###### Features lags 7
+###### Raw + Difference features
 
 | Lags | MSE   | MAE   | MAPE  |
 | :--- | ----- | ----- | ----- |
-| 1     | 0.818  | 0.636 | 1.896 |
-| 7     | 4.118  | 1.411 | 4.463 |
-| 14    | 8.454  | 2.100 | 6.729 |
-| 28    | 11.991 | 2.526 | 7.917 |
+| 1    | 0.358 | 0.439 | 1.379 |
+| 7    | 3.722 | 1.228 | 4.254 |
+| 14   | 5.159 | 1.665 | 5.476 |
+| 28   | 9.028 | 2.348 | 7.485 |
 
-###### Features lags 14
-
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.949  | 0.705 | 2.124 |
-| 7     | 3.976  | 1.463 | 4.644 |
-| 14    | 9.242  | 2.135 | 6.891 |
-| 28    | 11.824 | 2.392 | 7.511 |
-
-###### Features lags 28
+###### Raw + Difference + SMA features
 
 | Lags | MSE   | MAE   | MAPE  |
 | :--- | ----- | ----- | ----- |
-| 1     | 0.763  | 0.589 | 1.767 |
-| 7     | 4.433  | 1.444 | 4.592 |
-| 14    | 9.098  | 2.013 | 6.528 |
-| 28    | 11.817 | 2.365 | 7.476 |
+| 1    | 0.357 | 0.444 | 1.361 |
+| 7    | 2.608 | 1.249 | 3.853 |
+| 14   | 5.865 | 1.825 | 5.709 |
+| 28   | 9.673 | 2.434 | 7.303 |
 
-###### Features lags 14 and 28
-
-| Lags | MSE   | MAE   | MAPE  |
-| :--- | ----- | ----- | ----- |
-| 1     | 0.959  | 0.728 | 2.181 |
-| 7     | 4.034  | 1.411 | 4.448 |
-| 14    | 8.982  | 2.076 | 6.657 |
-| 28    | 11.490 | 2.354 | 7.395 |
-
-###### Features lags 1, 7, 14, 28
+###### Raw + Difference + SMA + EMA features
 
 | Lags | MSE   | MAE   | MAPE  |
 | :--- | ----- | ----- | ----- |
-| 1     | 1.630  | 0.891 | 2.668 |
-| 7     | 5.322  | 1.591 | 4.969 |
-| 14    | 9.161  | 2.147 | 6.866 |
-| 28    | 11.813 | 2.444 | 7.579 |
+| 1    | 0.360 | 0.444 | 1.361 |
+| 7    | 2.564 | 1.232 | 3.805 |
+| 14   | 5.913 | 1.838 | 5.738 |
+| 28   | 9.851 | 2.462 | 7.383 |
+
+###### Raw + Difference + SMA + EMA + VWAP features
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1    | 0.361 | 0.438 | 1.343 |
+| 7    | 2.624 | 1.305 | 3.948 |
+| 14   | 5.953 | 1.892 | 5.829 |
+| 28   | 9.518 | 2.418 | 7.247 |
+
+
+
+##### SVR: 2 years of train data
+
+###### Raw features
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1    | 1.115 | 0.581 | 1.999 |
+| 7    | 3.731 | 1.322 | 4.465 |
+| 14   | 5.579 | 1.628 | 5.536 |
+| 28   | 6.837 | 1.926 | 6.352 |
+
+###### Raw + Difference features
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1    | 1.454 | 0.687 | 2.325 |
+| 7    | 4.857 | 1.515 | 5.155 |
+| 14   | 6.998 | 1.979 | 6.545 |
+| 28   | 8.017 | 2.075 | 6.567 |
+
+###### Raw + Difference + SMA features
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1    | 0.393 | 0.452 | 1.396 |
+| 7    | 2.447 | 1.223 | 3.744 |
+| 14   | 4.938 | 1.668 | 5.157 |
+| 28   | 7.122 | 2.040 | 6.084 |
+
+###### Raw + Difference + SMA + EMA features
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1    | 0.387 | 0.446 | 1.377 |
+| 7    | 2.439 | 1.218 | 3.734 |
+| 14   | 4.866 | 1.655 | 5.114 |
+| 28   | 6.937 | 2.016 | 6.011 |
+
+###### Raw + Difference + SMA + EMA + VWAP features
+
+| Lags | MSE   | MAE   | MAPE  |
+| :--- | ----- | ----- | ----- |
+| 1    | 0.401 | 0.449 | 1.384 |
+| 7    | 2.430 | 1.204 | 3.692 |
+| 14   | 4.850 | 1.647 | 5.086 |
+| 28   | 6.657 | 1.952 | 5.795 |
+
+
+
+
 
 ##### Considerations
+
+**UPDATE**
 
 The extra features have been evaluated over 2 different time lengths for the train data, 1 and 2 years, with both Linear Regression and SVR. The average best performance, across all the lags, have been obtained by adopting lags of 14 and 28 days in the features and adopting the SVR model. Therefore, the selection of the final model has been performed by using 1 year of train data (from present date to past), all data plus 2 extra features with differences at 14 and 28 days of lag, and the SVR model.   
 

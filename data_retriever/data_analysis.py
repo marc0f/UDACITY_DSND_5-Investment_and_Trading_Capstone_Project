@@ -2,7 +2,7 @@ import datetime
 from data_retriever.retriever import get_daily_historical
 from utils.plot_factory import plot_historical
 
-from utils.defaults import DEFAULT_SYMBOLS
+from utils.defaults import SYMBOLS
 from utils.features import sma, ema, vwap
 
 
@@ -10,7 +10,7 @@ if __name__ == '__main__':
 
     # symbol = 'AAPL'
     # symbol = '^GSPC'
-    for symbol in DEFAULT_SYMBOLS.keys():
+    for symbol in SYMBOLS.keys():
         start_date = datetime.datetime(2016, 1, 1)
         end_date = datetime.datetime(2020, 8, 31)
 

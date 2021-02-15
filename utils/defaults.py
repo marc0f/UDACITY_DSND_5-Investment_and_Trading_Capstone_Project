@@ -1,7 +1,7 @@
 import os
 
 # defaults symbols
-DEFAULT_SYMBOLS={
+SYMBOLS={
     "NRG": "NRG Energy Inc.",
     "VNO": "Vornado Realty Trust",
     "MGM": "MGM Resorts International",
@@ -20,6 +20,12 @@ DATA_DIR=os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__)
 INTERVALS_TO_SECONDS={
     '1d': 24*60*60,
 }
+
+PREDICTION_HORIZONS = [1, 7, 14, 28]  # steps of prediction in base resolution, i.e. days
+TEST_LEN_DAYS = 90  # days
+TRAIN_LEN_DAYS = 2 * 265  # months
+
+DASHBOARD_DATA_WINDOW_DAYS = 180
 
 
 def interval_to_seconds(interval: str):
