@@ -29,11 +29,12 @@ def index():
     # start_date = datetime.datetime(2016, 1, 1)
     # end_date = datetime.datetime(2020, 8, 31)
     end_date = datetime.datetime.now()
-    start_date = end_date - datetime.timedelta(days=defaults.DASHBOARD_DATA_WINDOW_DAYS)
+    extra_days = max(defaults.PREDICTION_HORIZONS) + defaults.EXTRA_DATA_PERIODS
+    start_date = end_date - datetime.timedelta(days=defaults.DASHBOARD_DATA_WINDOW_DAYS + extra_days)
 
     regression_results = dict()
     for horizon in defaults.PREDICTION_HORIZONS:
-        regression_results[horizon] = dict()
+        regression_results[f"regression_result_{horizon}d"] = dict()
 
     for symbol in defaults.SYMBOLS.keys():
 
@@ -44,7 +45,7 @@ def index():
         data = get_daily_historical(symbol, start_date, end_date)
 
         data = clean_data(data)
-        regression_input, _ = prepare_data(data.copy(), )
+        regression_input, _ = prepare_data(data.copy(), delays=defaults.PREDICTION_HORIZONS)
         regression_input = regression_input[-1, :].reshape(1, -1)
 
         # compute predictions
@@ -54,12 +55,13 @@ def index():
         regression_pct_returns = 100 * (regression_outputs - current_price) / current_price
         regression_pct_returns = np.round(regression_pct_returns, decimals=2)
 
-        regression_results = dict()
-        # create dataframe with predicted data
-        predicted_data = pd.DataFrame()
+        # create dataframe for predicted data, first data-value current Adj. price
+        predicted_data = pd.DataFrame(index=[data.index[-1]],
+                                      data=[[data.iloc[-1]['Adj Close']] * 4],
+                                      columns=[f"Adj Close - {horizon}d_prediction" for horizon in defaults.PREDICTION_HORIZONS])
 
         for count, horizon in enumerate(defaults.PREDICTION_HORIZONS):
-            regression_results[horizon].update({symbol: regression_pct_returns[count]})
+            regression_results[f"regression_result_{horizon}d"].update({symbol: regression_pct_returns[count]})
 
             # append 1day prediction
             predicted_data = predicted_data.append(pd.DataFrame(index=[data.index[-1] + pd.Timedelta(days=horizon)],
@@ -78,10 +80,7 @@ def index():
     return render_template('index.html',
                            ids=ids,
                            figuresJSON=figuresJSON,
-                           regression_result_1d=regression_results[1],
-                           regression_result_7d=regression_results[7],
-                           regression_result_14d=regression_results[14],
-                           regression_result_28d=regression_results[28])
+                           **regression_results)
 
 
 def main():

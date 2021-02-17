@@ -23,7 +23,8 @@ INTERVALS_TO_SECONDS={
 
 PREDICTION_HORIZONS = [1, 7, 14, 28]  # steps of prediction in base resolution, i.e. days
 TEST_LEN_DAYS = 90  # days
-TRAIN_LEN_DAYS = 2 * 265  # months
+TRAIN_LEN_DAYS = 2 * 365  # months
+EXTRA_DATA_PERIODS = 100
 
 DASHBOARD_DATA_WINDOW_DAYS = 180
 

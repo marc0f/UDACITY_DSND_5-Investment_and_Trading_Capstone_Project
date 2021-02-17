@@ -21,11 +21,8 @@ np.random.seed(42)
 
 if __name__ == '__main__':
 
-    # sma 100
-    features_extra_data_periods = 100
-
     dataset_len = defaults.TEST_LEN_DAYS + defaults.TRAIN_LEN_DAYS + max(defaults.PREDICTION_HORIZONS) # days
-    dataset_len += features_extra_data_periods
+    dataset_len += defaults.EXTRA_DATA_PERIODS
 
     end_date = datetime.datetime.now() - datetime.timedelta(days=1)
     start_date = end_date - datetime.timedelta(days=dataset_len)
@@ -41,8 +38,7 @@ if __name__ == '__main__':
             data = clean_data(data)
             samples, targets = prepare_data(data, delays=defaults.PREDICTION_HORIZONS)
 
-            X_train, X_test, Y_train, Y_test = split_data(samples, targets, test_size=defaults.TRAIN_LEN_DAYS) #test_size=30, test_size=0.2
-
+            X_train, X_test, Y_train, Y_test = split_data(samples, targets, test_size=defaults.TRAIN_LEN_DAYS)
             print('Building model...')
             model = build_model()
 

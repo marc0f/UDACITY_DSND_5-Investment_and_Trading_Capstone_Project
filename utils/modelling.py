@@ -59,9 +59,9 @@ def build_model(num_cpus=NUM_CPUS):
     }
 
     # instantiate search grid
-    # cv = GridSearchCV(pipeline, param_grid=[srv_parameters, srv_parameters, srv_parameters, srv_parameters], verbose=2)
-    # return cv
-    return pipeline
+    cv = GridSearchCV(pipeline, param_grid=[srv_parameters, srv_parameters, srv_parameters, srv_parameters], verbose=0)
+    return cv
+    # return pipeline
 
 
 def evaluate_model(model, X_test, Y_test, X_train, Y_train, category_names):

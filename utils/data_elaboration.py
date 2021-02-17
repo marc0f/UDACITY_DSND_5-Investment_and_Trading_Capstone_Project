@@ -36,6 +36,9 @@ def is_unique(s):
 def clean_data(data):
     """ remove nans or constant values columns, or drop equals columns"""
 
+    # remove 'Stock Splits'
+    data = data.drop(columns='Stock Splits')
+
     for col_name in list(data.columns):
         if is_unique(data[col_name]):
             logger.info(f"Column {col_name} has unique values..removed.")
@@ -148,20 +151,19 @@ def prepare_data(data, delays=None):
     """ target is adjusted close"""
 
     targets = data['Adj Close']
-    # samples = data.drop(columns='Adj Close')
     samples = data
 
-    # # compute features
-    # samples[f"diff_1"] = diff(targets, periods=1)
-    # samples[f"diff_7"] = diff(targets, periods=7)
-    # samples[f"diff_14"] = diff(targets, periods=14)
-    # samples[f"diff_28"] = diff(targets, periods=28)
-    # samples['sma_20'] = sma(targets, periods=20)
-    # samples['sma_100'] = sma(targets, periods=100)
-    # samples['ema_10'] = ema(targets, periods=10)
-    # samples['ema_50'] = ema(targets, periods=50)
-    # samples['vwap_20'] = vwap(price_data=targets, volume_data=samples['Volume'], periods=20)
-    # samples['vwap_100'] = vwap(price_data=targets, volume_data=samples['Volume'], periods=100)
+    # compute features
+    samples[f"diff_1"] = diff(targets, periods=1)
+    samples[f"diff_7"] = diff(targets, periods=7)
+    samples[f"diff_14"] = diff(targets, periods=14)
+    samples[f"diff_28"] = diff(targets, periods=28)
+    samples['sma_20'] = sma(targets, periods=20)
+    samples['sma_100'] = sma(targets, periods=100)
+    samples['ema_10'] = ema(targets, periods=10)
+    samples['ema_50'] = ema(targets, periods=50)
+    samples['vwap_20'] = vwap(price_data=targets, volume_data=samples['Volume'], periods=20)
+    samples['vwap_100'] = vwap(price_data=targets, volume_data=samples['Volume'], periods=100)
 
     samples = samples.dropna()  # drop rows with at least 1 nans
     targets = targets[samples.index[0]:samples.index[-1]]

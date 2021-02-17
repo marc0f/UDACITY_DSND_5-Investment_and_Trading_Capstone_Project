@@ -999,10 +999,11 @@ Different normalization techniques can be compared only over MAPE metric.
 | 14    | 107.710 | 8.262 | 49.390 |
 | 28    | 101.141 | 7.954 | 44.961 |
 
+As shown in the tables above and in the picture below, for both models can be selected as normalization technique the Mean and Variance Normalization. Therefore, from now on the reported results have been achieved always by applying the selected normalization.
 
-As shown in the tables above, for both models can be selected as normalization technique the  Mean and Variance Normalization. Therefore, from now on the reported results have been achieved always by applying the selected normalization.
+![LinReg](imgs/results_linreg_norm.png)
 
-
+![SVR](imgs/results_svr_norm.png)
 
 #### Data ranges and Features Selection
 
@@ -1304,9 +1305,19 @@ As shown in the tables above, for both models can be selected as normalization t
 
 ##### Considerations
 
-**UPDATE**
+In this section both features and different train lengths have been evaluated in order to detect the best conditions to build the optimized model. Train length has been varied from 6 month to 2 years, for both Linear Regression and SVR. Together an incremental number of features have been tested, starting from raw data till combine all the available features. 
 
-The extra features have been evaluated over 2 different time lengths for the train data, 1 and 2 years, with both Linear Regression and SVR. The average best performance, across all the lags, have been obtained by adopting lags of 14 and 28 days in the features and adopting the SVR model. Therefore, the selection of the final model has been performed by using 1 year of train data (from present date to past), all data plus 2 extra features with differences at 14 and 28 days of lag, and the SVR model.   
+As reported in the tables above and better summarize din the pictures below, the Linear Regression model achieved the best performance (on average) for a train length of 1 year and using all the available features. A marked trend of performance improvement while increasing the features combinations is denoted.
+
+![LinReg](imgs/results_linreg_features.png)
+
+On the other hand, the SVR model achieved the best performance by using 2 years of data as well as all the available features. A marked trend of performance improvement while increasing the features combinations is denoted.
+
+Based on these results, the final model has been computed by using the SVR regressor, by using 2 years of train data (from present date to past), and a set of feature composed of raw data, differences, SMAsm EMAs, and EWAP.   
+
+
+
+![LinReg](imgs/results_svr_features.png)
 
 
 
@@ -1324,43 +1335,19 @@ The grid search has been performed over each selected assets, producing the dedi
 
 | Lags: | MSE    | MAE   | MAPE  |
 | ----- | ------ | ----- | ----- |
-| 1     | 0.514  | 0.544 | 1.602 |
-| 7     | 2.260  | 1.178 | 3.542 |
-| 14    | 4.853  | 1.611 | 4.564 |
-| 28    | 12.562 | 2.425 | 5.731 |
+| 1     | 0.523  | 0.512 | 1.584 |
+| 7     | 3.282  | 1.319 | 4.113 |
+| 14    | 6.149  | 1.813 | 5.692 |
+| 28    | 11.200 | 2.416 | 7.516 |
 
 ###### Train data performance
 
 | Lags: | MSE   | MAE   | MAPE  |
 | ----- | ----- | ----- | ----- |
-| 1     | 0.729 | 0.534 | 1.761 |
-| 7     | 2.301 | 1.000 | 3.071 |
-| 14    | 5.514 | 1.422 | 4.490 |
-| 28    | 9.048 | 1.844 | 5.731 |
-
-Selected hyper-parameters: 
-
-- C: 1.8
-- $\epsilon$: 0.18
-- kernel: RBF
-
-##### VNO
-
-| Lags: | MSE    | MAE   | MAPE  |
-| ----- | ------ | ----- | ----- |
-| 1     | 2.364  | 1.188 | 2.715 |
-| 7     | 9.021  | 2.187 | 5.137 |
-| 14    | 14.593 | 2.463 | 5.939 |
-| 28    | 26.085 | 3.426 | 7.968 |
-
-###### Train data performance
-
-| Lags: | MSE    | MAE   | MAPE  |
-| ----- | ------ | ----- | ----- |
-| 1     | 2.428  | 1.097 | 2.395 |
-| 7     | 10.261 | 2.135 | 4.911 |
-| 14    | 22.402 | 2.916 | 6.846 |
-| 28    | 41.997 | 3.853 | 9.385 |
+| 1     | 0.432 | 0.467 | 1.404 |
+| 7     | 2.434 | 1.161 | 3.599 |
+| 14    | 4.463 | 1.600 | 4.790 |
+| 28    | 9.601 | 2.281 | 6.786 |
 
 Selected hyper-parameters: 
 
@@ -1368,99 +1355,123 @@ Selected hyper-parameters:
 - $\epsilon$: 0.18
 - kernel: linear
 
-##### MGM
+##### VNO
 
 | Lags: | MSE    | MAE   | MAPE  |
 | ----- | ------ | ----- | ----- |
-| 1     | 2.345  | 0.774 | 3.415  |
-| 7     | 5.974  | 1.536 | 6.715  |
-| 14    | 9.378  | 1.755 | 9.279  |
-| 28    | 12.071 | 2.265 | 10.667 |
+| 1     | 3.518  | 1.375 | 1.594 |
+| 7     | 16.515 | 3.130 | 3.617 |
+| 14    | 29.230 | 4.327 | 5.035 |
+| 28    | 41.532 | 5.020 | 5.837 |
 
 ###### Train data performance
 
 | Lags: | MSE    | MAE   | MAPE  |
 | ----- | ------ | ----- | ----- |
-| 1     | 1.554  | 0.714 | 3.727  |
-| 7     | 3.234  | 1.197 | 5.616  |
-| 14    | 6.534  | 1.675 | 8.092  |
-| 28    | 12.461 | 2.279 | 11.997 |
+| 1     | 2.687  | 1.066 | 1.291 |
+| 7     | 15.304 | 2.843 | 3.432 |
+| 14    | 20.462 | 3.731 | 4.440 |
+| 28    | 33.309 | 4.323 | 5.174 |
 
 Selected hyper-parameters: 
 
-- C: 1.8
+- C: 0.2
+- $\epsilon$: 0.16
+- kernel: linear
+
+##### MGM
+
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 0.628  | 0.557 | 2.430  |
+| 7     | 4.026  | 1.385 | 6.344  |
+| 14    | 8.131  | 1.929 | 8.977  |
+| 28    | 15.598 | 2.657 | 12.728 |
+
+###### Train data performance
+
+| Lags: | MSE    | MAE   | MAPE  |
+| ----- | ------ | ----- | ----- |
+| 1     | 0.441  | 0.496 | 2.065  |
+| 7     | 3.470  | 1.277 | 5.269  |
+| 14    | 10.754 | 1.933 | 9.946  |
+| 28    | 15.953 | 2.601 | 13.073 |
+
+Selected hyper-parameters: 
+
+- C: 0.4
 - $\epsilon$: 0.18
-- kernel: RBF
+- kernel: linear
 
 ##### ABC
 
 | Lags: | MSE    | MAE   | MAPE  |
 | ----- | ------ | ----- | ----- |
-| 1     | 4.369  | 1.609 | 1.824 |
-| 7     | 14.438 | 2.844 | 3.162 |
-| 14    | 22.227 | 3.771 | 4.262 |
-| 28    | 28.804 | 4.370 | 4.917 |
+| 1     | 3.518  | 1.375 | 1.594 |
+| 7     | 16.515 | 3.130 | 3.617 |
+| 14    | 29.230 | 4.327 | 5.035 |
+| 28    | 41.532 | 5.020 | 5.837 |
 
 ###### Train data performance
 
 | Lags: | MSE    | MAE   | MAPE  |
 | ----- | ------ | ----- | ----- |
-| 1     | 3.699  | 1.374 | 1.571 |
-| 7     | 12.027 | 2.674 | 3.029 |
-| 14    | 20.948 | 3.467 | 3.918 |
-| 28    | 27.919 | 4.220 | 4.659 |
+| 1     | 2.687  | 1.066 | 1.291 |
+| 7     | 15.304 | 2.843 | 3.432 |
+| 14    | 20.462 | 3.731 | 4.440 |
+| 28    | 33.309 | 4.323 | 5.174 |
 
 Selected hyper-parameters: 
 
 - C: 1.8
-- $\epsilon$: 0.1
+- $\epsilon$: 0.02
 - kernel: linear
 
 ##### ALGN
 
 | Lags: | MSE    | MAE   | MAPE  |
 | ----- | ------ | ----- | ----- |
-| 1     | 249.247  | 8.398  | 3.152  |
-| 7     | 880.574  | 19.703 | 7.934  |
-| 14    | 1542.940 | 27.789 | 10.243 |
-| 28    | 2776.850 | 39.507 | 15.041 |
+| 1     | 92.869   | 6.024  | 2.279  |
+| 7     | 649.167  | 17.913 | 6.781  |
+| 14    | 1332.088 | 25.909 | 9.682  |
+| 28    | 3088.792 | 40.842 | 14.884 |
 
 ###### Train data performance
 
 | Lags: | MSE    | MAE   | MAPE  |
 | ----- | ------ | ----- | ----- |
-| 1     | 79.192   | 5.836  | 2.210  |
-| 7     | 607.769  | 16.418 | 6.146  |
-| 14    | 1306.095 | 24.357 | 9.386  |
-| 28    | 3098.407 | 40.478 | 15.275 |
+| 1     | 72.371   | 5.630  | 2.143  |
+| 7     | 442.560  | 13.741 | 4.759  |
+| 14    | 1062.184 | 21.430 | 7.930  |
+| 28    | 2621.171 | 36.428 | 14.168 |
 
 Selected hyper-parameters: 
 
 - C: 1.8
-- $\epsilon$: 0.14
+- $\epsilon$: 0.18
 - kernel: linear
 
 ##### DXCM
 
 | Lags: | MSE    | MAE   | MAPE  |
 | ----- | ------ | ----- | ----- |
-| 1     | 56.783   | 5.323  | 2.235  |
-| 7     | 601.593  | 17.280 | 7.138  |
-| 14    | 1055.302 | 23.418 | 9.098  |
-| 28    | 1812.322 | 30.270 | 11.736 |
+| 1     | 92.869   | 6.024  | 2.279  |
+| 7     | 649.167  | 17.913 | 6.781  |
+| 14    | 1332.088 | 25.909 | 9.682  |
+| 28    | 3088.792 | 40.842 | 14.884 |
 
 ###### Train data performance
 
 | Lags: | MSE    | MAE   | MAPE  |
 | ----- | ------ | ----- | ----- |
-| 1     | 88.322   | 6.313  | 2.364  |
-| 7     | 549.481  | 15.895 | 6.179  |
-| 14    | 998.461  | 23.151 | 8.971  |
-| 28    | 1642.233 | 30.004 | 11.413 |
+| 1     | 72.371   | 5.630  | 2.143  |
+| 7     | 442.560  | 13.741 | 4.759  |
+| 14    | 1062.184 | 21.430 | 7.930  |
+| 28    | 2621.171 | 36.428 | 14.168 |
 
 Selected hyper-parameters: 
 
-- C: 0.8
+- C: 1.8
 - $\epsilon$: 0.18
 - kernel: linear
 
@@ -1468,19 +1479,19 @@ Selected hyper-parameters:
 
 | Lags: | MSE    | MAE   | MAPE  |
 | ----- | ------ | ----- | ----- |
-| 1     | 108.555  | 6.863  | 2.398  |
-| 7     | 437.397  | 14.998 | 5.750  |
-| 14    | 1031.137 | 22.350 | 8.550  |
-| 28    | 1213.786 | 27.880 | 10.469 |
+| 1     | 81.612   | 6.283  | 2.514  |
+| 7     | 389.045  | 14.263 | 5.864  |
+| 14    | 708.261  | 19.345 | 8.068  |
+| 28    | 1565.015 | 29.134 | 12.376 |
 
 ###### Train data performance
 
 | Lags: | MSE    | MAE   | MAPE  |
 | ----- | ------ | ----- | ----- |
-| 1     | 81.539   | 6.037  | 2.041  |
-| 7     | 391.948  | 14.098 | 5.027  |
-| 14    | 610.338  | 17.908 | 6.602  |
-| 28    | 1179.813 | 24.854 | 9.820  |
+| 1     | 94.181   | 5.897  | 2.253  |
+| 7     | 351.729  | 12.455 | 4.845  |
+| 14    | 831.172  | 19.122 | 7.807  |
+| 28    | 1435.191 | 26.230 | 11.198 |
 
 Selected hyper-parameters: 
 
@@ -1492,23 +1503,23 @@ Selected hyper-parameters:
 
 | Lags: | MSE    | MAE   | MAPE  |
 | ----- | ------ | ----- | ----- |
-| 1     | 161.340  | 8.438  | 1.855 |
-| 7     | 661.287  | 19.323 | 4.313 |
-| 14    | 802.561  | 21.528 | 5.131 |
-| 28    | 1668.375 | 32.015 | 7.817 |
+| 1     | 113.500  | 7.672  | 1.827 |
+| 7     | 540.987  | 17.637 | 4.338 |
+| 14    | 947.912  | 24.010 | 5.952 |
+| 28    | 1759.059 | 33.855 | 8.348 |
 
 ###### Train data performance
 
 | Lags: | MSE    | MAE   | MAPE  |
 | ----- | ------ | ----- | ----- |
-| 1     | 118.642  | 7.622  | 1.683 |
-| 7     | 528.601  | 17.004 | 3.970 |
-| 14    | 1015.426 | 24.228 | 5.549 |
-| 28    | 2181.913 | 36.453 | 8.455 |
+| 1     | 134.458  | 7.667  | 1.876 |
+| 7     | 580.191  | 17.266 | 4.316 |
+| 14    | 819.655  | 21.601 | 5.456 |
+| 28    | 1728.329 | 33.380 | 8.291 |
 
 Selected hyper-parameters: 
 
-- C: 1.0
+- C: 1.8
 - $\epsilon$: 0.02
 - kernel: linear
 
@@ -1516,33 +1527,33 @@ Selected hyper-parameters:
 
 | Lags: | MSE    | MAE   | MAPE  |
 | ----- | ------ | ----- | ----- |
-| 1     | 2524.788  | 30.201  | 1.022 |
-| 7     | 15242.288 | 73.572  | 2.517 |
-| 14    | 27281.701 | 94.202  | 3.260 |
-| 28    | 24082.816 | 106.108 | 3.433 |
+| 1     | 2660.403  | 31.921  | 1.105 |
+| 7     | 9773.271  | 60.592  | 2.114 |
+| 14    | 20811.613 | 84.498  | 2.983 |
+| 28    | 35856.528 | 116.236 | 4.107 |
 
 ###### Train data performance
 
 | Lags: | MSE    | MAE   | MAPE  |
 | ----- | ------ | ----- | ----- |
-| 1     | 1975.176  | 28.735  | 0.960 |
-| 7     | 11072.803 | 66.578  | 2.214 |
-| 14    | 27731.105 | 94.791  | 3.242 |
-| 28    | 54112.979 | 130.876 | 4.563 |
+| 1     | 3499.101  | 30.983  | 1.094 |
+| 7     | 12320.506 | 63.333  | 2.224 |
+| 14    | 26309.596 | 90.332  | 3.254 |
+| 28    | 32250.920 | 119.326 | 4.154 |
 
 Selected hyper-parameters: 
 
-- C: 1.8
+- C: 1.2
 - $\epsilon$: 0.18
 - kernel: linear
 
 #### Considerations
 
-Some models presents a slightly deviation from the expected max MAPE + 5%, in particular in the results with 28 days of prediction horizon.
+As expected by observing the results achieved in the previous experiments, prediction with time horizon greater than 14 days are the more difficult to obtain, within a reasonable error. In the figure below both performance (in terms of MAPE) over the test data (unseen data) as well as performance over the same train data are reported, in order to have a clear insight in case of overfitting.
 
-Overall the performance achieved with the train data are almost equal or lower than the performance of the test set (unseen data), thus no over-fitting has been experienced.  Despite the availability of the RBF kernel, a linear one seems a preferred choice for most of the assets.
+![results](imgs/results_opti.png)
 
-Moreover, as reported in the previous section, 1 year has been selected fro the train data base on the average performance achieved. In any case, the performance achieved with 2 years of train data are close to the performance with 1 year data. Thus denoting a model robust to small perturbations in train data.  
+As shown, the performance achieved with the train data have a minimal difference respect to the one achieved over the test set (unseen data), thus no over-fitting has been experienced.  Despite the availability of the RBF kernel, a linear one seems a preferred choice. 
 
  
 
