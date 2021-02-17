@@ -2,7 +2,7 @@ Machine Learning Engineer Nanodegree
 
 ## Capstone Project
 Marco Fagiani  
-February 7st, 2021
+February 17st, 2021
 
 ## I. Definition
 ### Project Overview
@@ -1562,7 +1562,19 @@ As shown, the performance achieved with the train data have a minimal difference
 _(approx. 1-2 pages)_
 
 ### Free-Form Visualization
+
+![final_dash](imgs/dashboard_with_predictions.png)
+
+
+
+![final_opti](imgs/results_opti_1_7.png)
+
+
+
+
+
 In this section, you will need to provide some form of visualization that emphasizes an important quality about the project. It is much more free-form, but should reasonably support a significant result or characteristic about the problem that you want to discuss. Questions to ask yourself when writing this section:
+
 - _Have you visualized a relevant or important quality about the problem, dataset, input data, or results?_
 - _Is the visualization thoroughly analyzed and discussed?_
 - _If a plot is provided, are the axes, title, and datum clearly defined?_
@@ -1571,7 +1583,7 @@ In this section, you will need to provide some form of visualization that emphas
 
 
 - interesting: model creating base on pipeline and dashboard.
-- difficulties: model optimization  
+- difficulties: model optimization  for horizon greater than 7 days
 
 
 
@@ -1588,7 +1600,7 @@ In this section, you will summarize the entire end-to-end problem solution and d
 - wider set of features such as : SMA at different interval. SMA is widely used in stocks to get an estimate of the trend
   - implement other indexes such as: Bolinger Band, Strength Index, ...
 - to integrate such jus integrate them in the  prepare_data function, of course the required lookback window of data to compute the feature/d must be considered to extend the query date range
-- explore regression approach base on  neural network: starting from simple architecture such as MLP, ECHo state network and then more complex like Recurrent NN.  
+- explore regression approach base on  neural network: starting from simple architecture such as MLP, ECHO state network and then more complex like Recurrent NN.  
 
 
 
