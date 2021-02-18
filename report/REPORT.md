@@ -2,35 +2,35 @@ Machine Learning Engineer Nanodegree
 
 ## Capstone Project
 Marco Fagiani  
-February 17st, 2021
+February 18st, 2021
 
 ## I. Definition
 ### Project Overview
 Investment firms, hedge funds and even individuals have been using financial models to better understand market behavior and make profitable investments and trades. A wealth of  information is available in the form of historical stock prices and company performance data, suitable for machine learning algorithms to process.
 
-The goal of this project is to build a stock price predictor that takes daily trading data over a certain date range as input, and outputs projected estimates for given query dates. The selected model should guarantee a percentage error of the prediction (in the training phase) lower than the 5%. Note that the inputs will contain multiple metrics, such as opening price (Open), highest price the stock traded at (High), how many stocks were traded (Volume) and closing price adjusted for stock splits and dividends (Adjusted Close); this system only needs to predict the Adjusted Close price.
+The goal of this project is to build a stock price predictor that takes daily trading data over a certain date range as input, and outputs projected estimates for given time horizons. The selected model should guarantee a percentage error of the prediction (in the training phase) lower than the 5%. Note that the inputs will contain multiple metrics, such as opening price (Open), highest price the stock traded at (High), how many stocks were traded (Volume) and closing price adjusted for stock splits and dividends (Adjusted Close); this system only needs to predict the Adjusted Close price.
 
-In summary the project is divided in three main parts: 
+In summary the project is composed of three main parts: 
 
-- data retrieving;
-- data modeling;
--  data visualization. 
+- Data retrieving;
+- Data modeling;
+-  Data visualization. 
 
-The data retrieving is taking care of collect data from trusted source, clean them, combine with previous data and make them available to consumption of the others parts. 
+The data retrieving takes care of collect data from trusted source, clean them, combine with previous data (locally stored) and make them available to consumption of the others components of the project. 
 
-The data modeling's main task is to perform analysis and to produce the model that will be used to predict the market returns for different time spans. This part is mainly developed to be run on demand by the user to update the models, using the same hyper-parameters as well as to provide all the methods to investigate and explore other solutions. 
+The data modeling's main task is to perform analysis (with the user supervision) and to produce the model to be used to predict the stock returns at the different time horizons. This part is mainly developed to be run on demand by the user itself to update the model/s and performing an hyper-parameters fine tuning as well as to provide all the methods to investigate and explore other solutions. 
 
-Finally, the data visualization part provides a dashboard for the user to display historical data as well as the predictions achieved using up-to-date data. 
+Finally, the data visualization provides a dashboard to the user in order to display historical data as well as the predictions achieved using up-to-date data. The data visualization leverages over the data retrieving to collect the historical data and  it uses the data modeling to request the predictions.
 
 
 
 ### Problem Statement
 
-In order to produce any model the first step required is the collection of the data that will be used. Once a trusted source is selected the data must be analyzed to understand any issues within the data itself. Common problems are the presence of gaps in the data, fields reporting the same constant value, or fields with missing data. Moreover, begin the main goal to provide up-to-date prediction, the data must be updated with newest one on daily basis, avoiding the download of the whole required range every time.  
+In order to produce any model, the first requirement is the collection of the data. Once a trusted source is selected, the data must be analyzed in order to understand any issues within the data itself. Common problems are the presence of gaps in the data, fields reporting the same constant value, or fields with missing data while other fields not. Moreover, being the main goal to provide up-to-date prediction, the data must be updated with newest one on daily basis, avoiding the download of the whole required range every time, that could easily reach time intervals of several years.  
 
-Aiming to produce a prediction of the future returns for different time spans, one thing to understand is the amount o data to be used, especially to train the model. Few data will produce a model with both poor performance and not representing the general phenomena, but only a specific path in the data. On the other hand, using the maximum amount of data available, without a proper split in train and test sets, could lead to produce poor performance (example, due to over-fitting the model on the training data), lack of specificity of the model as well as really long training times. Moreover, the extraction of meaningful features is another important step. Select the right feature, even just dropping of the original one, can help to reduce the number of used data (thus a faster training phase), as well as pointing to the development of features that maximize the knowledge.
+Aiming to produce a prediction of the future returns for different time horizons, it is needed to understand the amount of data to be used, especially to train the model. Few data will produce a model with both poor performance and not representing the general phenomena, but only a specific path in the data. On the other hands, using an excessive extended window of data, without a proper split in train and test sets, could lead to produce poor performance as well (example, due to overfitting the model on the training data), lack of specificity of the model as well as really long training times. Moreover, the extraction of meaningful features is another important step. The selection of the right features, even just dropping of some of the original raw data, can help to drastically increase the performance while reducing the number of used data (thus a faster training phase).
 
-Finally, the results must be presented to the final user, in yet comprehensive but understandable manner.
+Finally, the results must be presented to the final user, in yet comprehensive but understandable manner. The dashboard should display an overview of the expected predictions, for different time horizons, as well as report these predictions concatenated  with the historical data.
 
 
 
@@ -53,7 +53,7 @@ The MSE and the MAE are metrics commonly used to measure the regression performa
 ## II. Analysis
 ### Data Exploration
 
-The project has been performed over the following set of stocks:
+The stocks selected for the project are the Top Stock till mid-2020 reported by  [Investopedia:](https://www.investopedia.com/top-stocks-4581225)
 
 - Best Value Stocks 
   - NRG Energy Inc. ([NRG](https://www.investopedia.com/markets/quote?tvwidgetsymbol=NRG))
@@ -69,7 +69,9 @@ The project has been performed over the following set of stocks:
   - Regeneron Pharmaceuticals Inc. ([REGN](https://www.investopedia.com/markets/quote?tvwidgetsymbol=REGN))
   - S&P 500 ([^GSPC](https://www.investopedia.com/terms/s/sp.asp))
 
-Considered the Top Stock till mid-2020 ([Investopedia](https://www.investopedia.com/top-stocks-4581225)).
+
+
+#### Data source
 
 The stock data are retrieved by using the Yahoo! Finance [API](https://pypi.org/project/yfinance/) and leveraging over the historical end-point. The obtained data have the following structure:
 
@@ -99,11 +101,11 @@ Here below is reported the last 6 months of prices (open, close, high, low, adj)
 
 #### Dashboard
 
-The developed dashboard displays the expected returns (predictions) a head of 1, 7, 14, and 28 days for each symbol. Also a visualization of the past data and the predictions is provided in graphs.  
+The developed dashboard displays the expected returns (predictions) for the time horizons of 1, 7, 14, and 28 days for each symbol. A visualization of the past data and the predictions is also provided in graphs.  
 
 ![Dashboard](imgs/dashboard_1.png)
 
-The dashboard utilizes the models pre-trained and stored in a dedicated folder. Instructions to create the models and make them available for the dashboard are reported in the README file in the repository.
+The dashboard utilizes the models trained and stored in a dedicated folder. Instructions to create the models and make them available for the dashboard are reported in the README in the repository.
 
 
 
@@ -113,7 +115,7 @@ The dashboard utilizes the models pre-trained and stored in a dedicated folder. 
 
 #### Data Normalization
 
-Once the data are cleaned (see below), the next step is to normalize the data. The normalization process can affects the data range (i.e., simple compression or expansion to get data in the [0, 1] range) or alters the data statistics, mean and variance.
+Once the data are cleaned (see below), the next step is to normalize the data. The normalization process can affects the data range (i.e., simple compression or expansion to get data in [0, 1] interval) or alters the data statistics, mean and variance.
 
 ##### Min-Max normalization (Normalizer)
 
@@ -134,19 +136,21 @@ $$
 
 #### Features
 
+As model input different set of features have been taken into account and evaluated. Starting from the raw data provided from the data retriever, 4 further sets of features are computed. Each set base on a different technique, specifically, difference, simple moving average, exponential moving average and volume weights  moving average. 
+
 ##### Raw
 
-The basic group of features is composed by the available raw data, thus:  Open, High, Low, Close, Adj Close, Volume, and Dividends.
+The first group of features is composed by the available raw data, thus:  Open, High, Low, Close, Adj Close, Volume, and Dividends.
 
 ##### Difference
 
-A first set of features is made by using the simple difference between the adjusted price at time $t$ and the value at $t-i$. Features have been computed for $i$ equals to 1, 7, 14, and 28 days. A sample of the generated features are reported in the following image.
+The second set of features is made by using the simple difference between the adjusted price at time $t$ and the value at $t-i$. Features have been computed for $i$ equals to 1, 7, 14, and 28 days. A sample of the generated features are reported in the following image.
 
 ![NRG feature_diff](imgs/visual_NRG_feature_diff.png) 
 
 
 
-##### SMA
+##### SMA 
 
 A simple moving average (SMA) is an arithmetic moving average calculated over a specific number of time periods of the target price (adjusted close price). Short-term  averages respond quickly to changes in the price of the underlying  security, while long-term averages are slower to react.
 
@@ -190,6 +194,8 @@ A common time-period values are not defined for this indicator ([VWAP](https://w
 
 #### Regression
 
+Two regression techniques have been selected to be evaluated for the model: Linear Regression and Support Vector Machine.    
+
 ##### Linear Regression
 
 The Linear Regression (LR) is a linear approach to modeling the relationship between a scalar response and one or more explanatory variables. A linear model with coefficients $w = (w_0, w_1, \dots, w_n)$ is fitted to minimize the residual sum of squares between the observed targets in the dataset, and the targets predicted by the linear approximation. Mathematically it solves a problem of the form: 
@@ -218,13 +224,15 @@ The kernel types to be evaluated are the linear and the radial basis function (R
 
 #### Data Validation
 
-The experiments has been divided in tow main groups: model validation and model finalization.
+The creation of the final model requires a preliminary step, namely model validation, in order to perform an analysis to target the normalization to adopt, the features as well as their possible combinations to use as model inputs, and the appropriate length (window) of the train data. Finally, the final model can be created performing a hyper-parameters tuning.      
+
+Therefore, the experiments as well as the results have been grouped  into "model validation" and "model finalization" sections.
 
 ##### Model validation
 
-In the model validation the data has been split fixing the data length for the test to 6 months, and varying data length for the train from 6 months to about 4 years, based on the evaluation performed.  A "full range" train, about 4 years, has has been adopted to perform the validation of the the data normalization. Whereas, the evaluation of both the length of the train period, and the extra features to select, has been performed assuming 3 different  lengths for the train data: 6 months, 1 year and 2 years. Moreover, the regression technique parameters have not been optimized in this phase, and the default ones have been adopted. In the case of LR, fit_intercept enabled, and normalize disabled. For the SVR, the kernel set to RBF, $\gamma$ set to 'scale' (thus value set as $1 / (n\_features * X.var())$), C set to 1, $\epsilon$ set to 1.
+In the model validation the data has been split into train and test, but keeping the test length fixed to 6 months, and varying the train length from 6 months to about 4 years, based on the evaluation performed.  A "full range" train, about 4 years, has has been adopted to perform the validation of the the data normalization. Whereas, the evaluation of the appropriate train length as well as the features and their combinations evaluation, have been performed assuming 3 different  lengths for the train data: 6 months, 1 year and 2 years. Moreover, the regression technique parameters have not been optimized in this phase, and the default ones have been adopted. In the case of LR, fit_intercept enabled, and normalize disabled. For the SVR, the kernel set to RBF, $\gamma$ set to 'scale' (thus value set as $1 / (n\_features * X.var())$), C set to 1, $\epsilon$ set to 1.
 
-In order to select the normalization to use, among none, Mean and Variance Normalization and Min-Max normalization, the data from 2016/01/01 to 2021/02/05 has been adopted.
+In order to select the normalization to adopt, among none, Mean and Variance Normalization and Min-Max normalization, the data from 2016/01/01 to 2021/02/05 has been adopted.
 
 Once the normalization has been selected, the same time range has been adopted to selected some extra feature to be introduced, extracted from the data, to achieve better results. The extra features selected are the difference for each input data, between the data at the time $t$ and the value of the previous 1, 7, 14, 28 days. Thus generating 4 set of features providing difference to different time lags.
 
@@ -232,7 +240,13 @@ Once the normalization has been selected, the same time range has been adopted t
 
 ##### Model finalization
 
-The cross-validation and grid search are performed over the hyper-parameters of the selected approach. This stage produces as output the results achieved by the optimized models, one model for each assets, over the test data (unseen data). Moreover, the optimized models are store into dedicated files and used for the prediction provided by the developed dashboard.  
+The cross-validation (CV) and grid search (GS) are performed over the hyper-parameters of the selected approach. This stage produces as output the results achieved by the optimized models, one model for each assets, over the test data (unseen data). Moreover, the optimized models are store into dedicated files and used for the prediction provided by the developed dashboard.  
+
+The applied CV approach is the k-fold CV, in which the original data are split in k equal sets (folds). Iteratively, 1 fold is retained to test/validate the model while the remaining k-1 folds are used to train the data. A total of k validations are performed and the k results (for a specific metric) are averaged together to produce a single estimation.
+
+The grid-search creates a D-dimension grid (where D is the number of the parameters to tune), where each dimension contains all the possible value for a specific parameters, given a defined range and a minimum step. Therefore, each point of the grid is a tuple of D values, each of them associated to a specific parameters.
+
+For each grid point of the GS, a CV is performed and the score returned by the CV itself is associated to the grid point. Completed the GS, all the grid points have a score and the point with the overall best score/s represents the best combination of hyper-parameters. 
 
 
 
@@ -242,9 +256,9 @@ The cross-validation and grid search are performed over the hyper-parameters of 
 
 As introduced in the Project Overview the data pipeline is composed by 3 parts:
 
-- data retrieving;
-- data modeling;
-- data visualization. 
+- Data retrieving;
+- Data modeling;
+- Data visualization. 
 
 Basically, the data retrieving stage queries the required window of data starting from the current UTC datetime. The raw data are then stored in a local dedicated CSV, for each symbol. These CSVs provide the starting points further queries. Specifically, if the application requests again the data, at first the data are read from the dedicated CSV, and only for the missing date-range a new query, toward the data provider, is performed. The new data, them, are integrated within the dedicated CSV one.
 
@@ -267,9 +281,9 @@ Here an extract of the sequence of operations performed to create a model.
 ```python
 data = get_daily_historical(symbol, start_date, end_date, min_length=dataset_len)
 data = clean_data(data)
-samples, targets = prepare_data(data, delays=prediction_horizons, lags=features_lags)
+samples, targets = prepare_data(data, delays=prediction_horizons)
 
-X_train, X_test, Y_train, Y_test = train_test_split(samples, targets, test_size=test_len) #test_size=30, test_size=0.2
+X_train, X_test, Y_train, Y_test = split_data(samples, targets, test_size=test_len_days)
 
 print('Building model...')
 model = build_model()
@@ -397,7 +411,7 @@ On the other hand, if previous data exist, the routine load the data from the CS
 
 #### Data Cleaning
 
-A cleaning procedure is performed only once the data are being used in the training, test, or prediction phase. The only abnormality in the data is the presence of two columns, Dividends and Stock Splits, composed of only 0 values. Therefore, these columns are removed in a dedicated clean function that detects columns with all equal values.
+A cleaning procedure is performed only once the data are being used in the training, test, or prediction phase. The only abnormality in the data is the presence of the Stock Splits composed of only 0 values. Therefore, these column is removed. Initially, a dedicated clean function were used to detects columns with all equal values and remove them.
 
 ```python
 def is_unique(s):
@@ -408,10 +422,15 @@ def is_unique(s):
 def clean_data(data):
     """ remove nans or constant values columns, or drop equals columns"""
 
+    # remove 'Stock Splits'
+    data = data.drop(columns='Stock Splits')
+
     for col_name in list(data.columns):
         if is_unique(data[col_name]):
             logger.info(f"Column {col_name} has unique values..removed.")
             data.drop(columns=col_name, inplace=True)
+
+    return data
 ```
 
 
@@ -741,17 +760,14 @@ def index():
     # start_date = datetime.datetime(2016, 1, 1)
     # end_date = datetime.datetime(2020, 8, 31)
     end_date = datetime.datetime.now()
-    start_date = end_date - datetime.timedelta(days=180)
+    extra_days = max(defaults.PREDICTION_HORIZONS) + defaults.EXTRA_DATA_PERIODS
+    start_date = end_date - datetime.timedelta(days=defaults.DASHBOARD_DATA_WINDOW_DAYS + extra_days)
 
-    prediction_horizons = [1, 7, 14, 28]
-    features_lags = [14, 28]
+    regression_results = dict()
+    for horizon in defaults.PREDICTION_HORIZONS:
+        regression_results[f"regression_result_{horizon}d"] = dict()
 
-    regression_result_1d = dict()
-    regression_result_7d = dict()
-    regression_result_14d = dict()
-    regression_result_28d = dict()
-
-    for symbol in DEFAULT_SYMBOLS.keys():
+    for symbol in defaults.SYMBOLS.keys():
 
         logger.info(f"Performing regression for symbol: {symbol}")
         model = load_model(f"../models/production_models/models_{symbol}.dump")
@@ -760,7 +776,7 @@ def index():
         data = get_daily_historical(symbol, start_date, end_date)
 
         data = clean_data(data)
-        regression_input, _ = prepare_data(data.copy(), diffs=features_lags)
+        regression_input, _ = prepare_data(data.copy(), delays=defaults.PREDICTION_HORIZONS)
         regression_input = regression_input[-1, :].reshape(1, -1)
 
         # compute predictions
@@ -770,31 +786,18 @@ def index():
         regression_pct_returns = 100 * (regression_outputs - current_price) / current_price
         regression_pct_returns = np.round(regression_pct_returns, decimals=2)
 
-        regression_result_1d.update({symbol: regression_pct_returns[0]})
-        regression_result_7d.update({symbol: regression_pct_returns[1]})
-        regression_result_14d.update({symbol: regression_pct_returns[2]})
-        regression_result_28d.update({symbol: regression_pct_returns[3]})
-
-        # create dataframe with predicted data
+        # create dataframe for predicted data, first data-value current Adj. price
         predicted_data = pd.DataFrame(index=[data.index[-1]],
-                                      data=[[data.iloc[-1]['Adj Close']]*4],
-                                      columns=['Adj Close - 1d_prediction', 'Adj Close - 7d_prediction', 'Adj Close - 14d_prediction', 'Adj Close - 28d_prediction'])
-        # append 1day prediction
-        predicted_data = predicted_data.append(pd.DataFrame(index=[predicted_data.index[0] + pd.Timedelta(days=1)],
-                                                            data=[regression_outputs[0]],
-                                                            columns=['Adj Close - 1d_prediction']))
-        # append 7day prediction
-        predicted_data = predicted_data.append(pd.DataFrame(index=[predicted_data.index[0] + pd.Timedelta(days=7)],
-                                                            data=[regression_outputs[1]],
-                                                            columns=['Adj Close - 7d_prediction']))
-        # append 14day prediction
-        predicted_data = predicted_data.append(pd.DataFrame(index=[predicted_data.index[0] + pd.Timedelta(days=14)],
-                                                            data=[regression_outputs[2]],
-                                                            columns=['Adj Close - 14d_prediction']))
-        # append 28day prediction
-        predicted_data = predicted_data.append(pd.DataFrame(index=[predicted_data.index[0] + pd.Timedelta(days=28)],
-                                                            data=[regression_outputs[3]],
-                                                            columns=['Adj Close - 28d_prediction']))
+                                      data=[[data.iloc[-1]['Adj Close']] * 4],
+                                      columns=[f"Adj Close - {horizon}d_prediction" for horizon in defaults.PREDICTION_HORIZONS])
+
+        for count, horizon in enumerate(defaults.PREDICTION_HORIZONS):
+            regression_results[f"regression_result_{horizon}d"].update({symbol: regression_pct_returns[count]})
+
+            # append 1day prediction
+            predicted_data = predicted_data.append(pd.DataFrame(index=[data.index[-1] + pd.Timedelta(days=horizon)],
+                                                                data=[regression_outputs[count]],
+                                                                columns=[f"Adj Close - {horizon}d_prediction"]))
 
         # plot data
         fig = plot_historical_with_predicted_data(symbol, data, predicted_data, return_fig=True)
@@ -808,10 +811,7 @@ def index():
     return render_template('index.html',
                            ids=ids,
                            figuresJSON=figuresJSON,
-                           regression_result_1d=regression_result_1d,
-                           regression_result_7d=regression_result_7d,
-                           regression_result_14d=regression_result_14d,
-                           regression_result_28d=regression_result_28d)
+                           **regression_results)
 ```
 
 The data are retrieved and prepared as shown in the previous section. The stored model is loaded from the destination folder.
@@ -885,7 +885,7 @@ The predicted_data is passed separately  in order to be added in the plot with a
 
 
 
-###### Dispaly data and figures
+###### Display data and figures
 
 In the html the plotly figure, converted into JSON, are addressed as follows:
 
@@ -1313,7 +1313,7 @@ As reported in the tables above and better summarize din the pictures below, the
 
 On the other hand, the SVR model achieved the best performance by using 2 years of data as well as all the available features. A marked trend of performance improvement while increasing the features combinations is denoted.
 
-Based on these results, the final model has been computed by using the SVR regressor, by using 2 years of train data (from present date to past), and a set of feature composed of raw data, differences, SMAsm EMAs, and EWAP.   
+Based on these results, the final model has been computed by using the SVR regressor, by using 2 years of train data (from present date to past), and a set of feature composed of raw data, differences, SMAs, EMAs, and EWAP.   
 
 
 
@@ -1559,54 +1559,16 @@ As shown, the performance achieved with the train data have a minimal difference
 
 
 ## V. Conclusion
-_(approx. 1-2 pages)_
-
-### Free-Form Visualization
+The project aimed to the prediction of stocks returns at different time horizons. The dashboard allows to visualized both historical and predicted data. The predicted data are computed by exploiting a regression model, for each stock, trained on demand. 
 
 ![final_dash](imgs/dashboard_with_predictions.png)
 
-
+The models have been optimized in terms of features adopted, normalization approach, length of the train data and hyper-parameters. A MAPE <5%, or really close, for the predicted values can be ensured for all the stock only for time horizons lower than 14 days. Specifically, all the stock achieved a MAPE < 3% for the daily predictions. For greater horizons, > 7 days, NRG, VNO, ABC, REGN and ^GSPC have also reported good performance.
 
 ![final_opti](imgs/results_opti_1_7.png)
 
 
 
+The different performance achieved for the stock could be an indicator to investigate further for better  features. At first, instead of using state-of-the-art periods for the SMA, EMA and VWAP, a grid-search could be performed to select the best parameters, maybe also dedicated parameters for each stock. Later, the features could be extended by introducing more advanced indexes such as Bollinger Band and Strength Index. 
 
-
-In this section, you will need to provide some form of visualization that emphasizes an important quality about the project. It is much more free-form, but should reasonably support a significant result or characteristic about the problem that you want to discuss. Questions to ask yourself when writing this section:
-
-- _Have you visualized a relevant or important quality about the problem, dataset, input data, or results?_
-- _Is the visualization thoroughly analyzed and discussed?_
-- _If a plot is provided, are the axes, title, and datum clearly defined?_
-
-### Reflection
-
-
-- interesting: model creating base on pipeline and dashboard.
-- difficulties: model optimization  for horizon greater than 7 days
-
-
-
-In this section, you will summarize the entire end-to-end problem solution and discuss one or two particular aspects of the project you found interesting or difficult. You are expected to reflect on the project as a whole to show that you have a firm understanding of the entire process employed in your work. Questions to ask yourself when writing this section:
-
-- _Have you thoroughly summarized the entire process you used for this project?_
-- _Were there any interesting aspects of the project?_
-- _Were there any difficult aspects of the project?_
-- _Does the final model and solution fit your expectations for the problem, and should it be used in a general setting to solve these types of problems?_
-
-### Improvement
-
-
-- wider set of features such as : SMA at different interval. SMA is widely used in stocks to get an estimate of the trend
-  - implement other indexes such as: Bolinger Band, Strength Index, ...
-- to integrate such jus integrate them in the  prepare_data function, of course the required lookback window of data to compute the feature/d must be considered to extend the query date range
-- explore regression approach base on  neural network: starting from simple architecture such as MLP, ECHO state network and then more complex like Recurrent NN.  
-
-
-
-In this section, you will need to provide discussion as to how one aspect of the implementation you designed could be improved. As an example, consider ways your implementation can be made more general, and what would need to be modified. You do not need to make this improvement, but the potential solutions resulting from these changes are considered and compared/contrasted to your current solution. Questions to ask yourself when writing this section:
-
-- _Are there further improvements that could be made on the algorithms or techniques you used in this project?_
-- _Were there algorithms or techniques you researched that you did not know how to implement, but would consider using if you knew how?_
-- _If you used your final solution as the new benchmark, do you think an even better solution exists?_
-
+Finally, other regression approaches  could take into account. For example, neural network based, going from simple architectures, such as Feed-forward to Multi Layer Perceptron, toward advanced one, as ECHO state network or Recurrent NN.
